@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Exceptions;
 
-class InvalidUserStatusException extends \InvalidArgumentException
+final class InvalidUserStatusException extends \InvalidArgumentException
 {
 
     public static function becauseValueIsInvalid(string $value): self

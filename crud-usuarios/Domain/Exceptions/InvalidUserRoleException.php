@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Exceptions;
 
-class InvalidUserRoleException extends \InvalidArgumentException
+final class InvalidUserRoleException extends \InvalidArgumentException
 {
     public static function becauseValueIsInvalid(string $value): self
     {

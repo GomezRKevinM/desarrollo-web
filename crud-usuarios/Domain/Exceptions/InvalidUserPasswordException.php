@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Exceptions;
 
-class InvalidUserPasswordException extends \InvalidArgumentException
+final class InvalidUserPasswordException extends \InvalidArgumentException
 {
 
     public static function becauseValueIsEmpty(): self

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Exceptions;
 
-class InvalidUserEmailException extends \InvalidArgumentException
+final class InvalidUserEmailException extends \InvalidArgumentException
 {
 
     public static function becauseValueIsEmpty(): self
