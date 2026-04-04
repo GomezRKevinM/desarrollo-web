@@ -2,9 +2,9 @@
 
 declare(strict_types = 1);
 
-namespace App\Domain\ValuesObjects;
+namespace App\crud_usuarios\Domain\ValuesObjects;
 
-use App\Domain\Exceptions\InvalidUserPasswordException;
+use App\crud_usuarios\Domain\Exceptions\InvalidUserPasswordException;
 class UserPassword
 {
     private string $value;

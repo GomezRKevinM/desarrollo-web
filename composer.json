@@ -1,0 +1,19 @@
+{
+  "name": "vendor_name/desarrollo-web",
+  "description": "description",
+  "minimum-stability": "stable",
+  "license": "proprietary",
+  "authors": [
+    {
+      "name": "Kevin Gomez",
+      "email": "kgomezr2@unicartagena.edu.co"
+    }
+  ],
+  "require": {
+  },
+  "autoload": {
+    "psr-4": {
+      "App\\": ""
+    }
+  }
+}

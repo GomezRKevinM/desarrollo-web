@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Domain\Exceptions;
+namespace App\crud_usuarios\Domain\Exceptions;
 
-final class InvalidCreedentialsException extends \RuntimeException
+final class InvalidCredentialsException extends \RuntimeException
 {
 
     public static function becauseCredentialsAreInvalid(): self
