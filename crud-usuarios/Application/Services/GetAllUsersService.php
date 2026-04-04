@@ -7,6 +7,7 @@ namespace App\crud_usuarios\Application\Services;
 use App\crud_usuarios\Application\Ports\In\GetAllUsersUseCase;
 use App\crud_usuarios\Application\Ports\Out\GetAllUsersPort;
 use App\crud_usuarios\Application\Services\Dto\Queries\GetAllUsersQuery;
+use App\crud_usuarios\Domain\Models\UserModel;
 
 final class GetAllUsersService implements GetAllUsersUseCase
 {
