@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Domain\Models;
+namespace App\crud_usuarios\Domain\Models;
 
-use App\Domain\ValuesObjects\UserId;
-use App\Domain\ValuesObjects\UserName;
-use App\Domain\ValuesObjects\UserEmail;
-use App\Domain\ValuesObjects\UserPassword;
-use App\Domain\Enums\UserRoleEnum;
-use App\Domain\Enums\UserStatusEnum;
+use App\crud_usuarios\Domain\ValuesObjects\UserId;
+use App\crud_usuarios\Domain\ValuesObjects\UserName;
+use App\crud_usuarios\Domain\ValuesObjects\UserEmail;
+use App\crud_usuarios\Domain\ValuesObjects\UserPassword;
+use App\crud_usuarios\Domain\Enums\UserRoleEnum;
+use App\crud_usuarios\Domain\Enums\UserStatusEnum;
 
 final class UserModel
 {

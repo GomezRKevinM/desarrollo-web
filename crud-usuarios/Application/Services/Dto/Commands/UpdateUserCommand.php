@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Application\Services\Dto\Commands;
+namespace App\crud_usuarios\Application\Services\Dto\Commands;
 
 class UpdateUserCommand
 {

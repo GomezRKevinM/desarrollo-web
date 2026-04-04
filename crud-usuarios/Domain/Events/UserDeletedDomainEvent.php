@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Domain\Events;
+namespace App\crud_usuarios\Domain\Events;
 
-use App\Domain\ValuesObjects\UserId;
+use App\crud_usuarios\Domain\ValuesObjects\UserId;
 
 
 class UserDeletedDomainEvent extends DomainEvent

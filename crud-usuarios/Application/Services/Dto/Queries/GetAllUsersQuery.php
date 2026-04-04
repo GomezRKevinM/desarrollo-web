@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Application\Services\Dto\Queries;
+namespace App\crud_usuarios\Application\Services\Dto\Queries;
 
 final class GetAllUsersQuery
 {

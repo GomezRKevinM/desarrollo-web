@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Domain\Enums;
+namespace App\crud_usuarios\Domain\Enums;
 
-use App\Domain\Exceptions\InvalidUserRoleException;
+use App\crud_usuarios\Domain\Exceptions\InvalidUserRoleException;
 
 class UserRoleEnum
 {
