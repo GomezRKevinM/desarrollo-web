@@ -6,7 +6,7 @@ namespace App\crud_usuarios\Application\Ports\In;
 
 use App\crud_usuarios\Application\Services\Dto\Commands\DeleteUserCommand;
 
-interface DeleteUserCase
+interface DeleteUserUseCase
 {
     public function execute(DeleteUserCommand $command): void;
 }
