@@ -63,17 +63,17 @@ app/Domain/
 
 Las excepciones de dominio representan situaciones inválidas del negocio, no errores técnicos.
 
-| Clase | Extiende | ¿Quién la lanza? | Named Constructors |
-|---|---|---|---|
-| `InvalidUserIdException` | `InvalidArgumentException` | `UserId` | `becauseValueIsEmpty()` |
-| `InvalidUserNameException` | `InvalidArgumentException` | `UserName` | `becauseValueIsEmpty()`, `becauseLengthIsTooShort($min)` |
-| `InvalidUserEmailException` | `InvalidArgumentException` | `UserEmail` | `becauseValueIsEmpty()`, `becauseFormatIsInvalid($email)` |
-| `InvalidUserPasswordException` | `InvalidArgumentException` | `UserPassword` | `becauseValueIsEmpty()`, `becauseLengthIsTooShort($min)` |
-| `InvalidUserRoleException` | `InvalidArgumentException` | `UserRoleEnum` | `becauseValueIsInvalid($value)` |
-| `InvalidUserStatusException` | `InvalidArgumentException` | `UserStatusEnum` | `becauseValueIsInvalid($value)` |
-| `UserAlreadyExistsException` | `DomainException` | Servicios de Aplicación | `becauseEmailAlreadyExists($email)` |
-| `UserNotFoundException` | `DomainException` | Servicios de Aplicación | `becauseIdWasNotFound($id)` |
-| `InvalidCredentialsException` | `RuntimeException` | Servicio de login | `becauseCredentialsAreInvalid()`, `becauseUserIsNotActive()` |
+| Clase                          | Extiende                   | ¿Quién la lanza?        | Named Constructors                                           |
+|--------------------------------|----------------------------|-------------------------|--------------------------------------------------------------|
+| `InvalidUserIdException`       | `InvalidArgumentException` | `UserId`                | `becauseValueIsEmpty()`                                      |
+| `InvalidUserNameException`     | `InvalidArgumentException` | `UserName`              | `becauseValueIsEmpty()`, `becauseLengthIsTooShort($min)`     |
+| `InvalidUserEmailException`    | `InvalidArgumentException` | `UserEmail`             | `becauseValueIsEmpty()`, `becauseFormatIsInvalid($email)`    |
+| `InvalidUserPasswordException` | `InvalidArgumentException` | `UserPassword`          | `becauseValueIsEmpty()`, `becauseLengthIsTooShort($min)`     |
+| `InvalidUserRoleException`     | `InvalidArgumentException` | `UserRoleEnum`          | `becauseValueIsInvalid($value)`                              |
+| `InvalidUserStatusException`   | `InvalidArgumentException` | `UserStatusEnum`        | `becauseValueIsInvalid($value)`                              |
+| `UserAlreadyExistsException`   | `DomainException`          | Servicios de Aplicación | `becauseEmailAlreadyExists($email)`                          |
+| `UserNotFoundException`        | `DomainException`          | Servicios de Aplicación | `becauseIdWasNotFound($id)`                                  |
+| `InvalidCredentialsException`  | `RuntimeException`         | Servicio de login       | `becauseCredentialsAreInvalid()`, `becauseUserIsNotActive()` |
 
 #### Patrón Named Constructors
 
@@ -94,19 +94,19 @@ throw InvalidUserEmailException::becauseValueIsEmpty();
 Los Enums representan conjuntos cerrados de valores que el negocio permite.
 
 #### UserRoleEnum
-| Constante | Valor | Descripción |
-|---|---|---|
-| `ADMIN` | `'ADMIN'` | Administrador del sistema |
-| `MEMBER` | `'MEMBER'` | Usuario estándar |
-| `REVIEWER` | `'REVIEWER'` | Usuario revisor |
+| Constante  | Valor        | Descripción               |
+|------------|--------------|---------------------------|
+| `ADMIN`    | `'ADMIN'`    | Administrador del sistema |
+| `MEMBER`   | `'MEMBER'`   | Usuario estándar          |
+| `REVIEWER` | `'REVIEWER'` | Usuario revisor           |
 
 #### UserStatusEnum
-| Constante | Valor | Descripción |
-|---|---|---|
-| `ACTIVE` | `'ACTIVE'` | Usuario activo, puede operar |
-| `INACTIVE` | `'INACTIVE'` | Desactivado por el administrador |
-| `PENDING` | `'PENDING'` | Recién creado, pendiente de activación |
-| `BLOCKED` | `'BLOCKED'` | Bloqueado por intentos fallidos u otra razón |
+| Constante  | Valor        | Descripción                                  |
+|------------|--------------|----------------------------------------------|
+| `ACTIVE`   | `'ACTIVE'`   | Usuario activo, puede operar                 |
+| `INACTIVE` | `'INACTIVE'` | Desactivado por el administrador             |
+| `PENDING`  | `'PENDING'`  | Recién creado, pendiente de activación       |
+| `BLOCKED`  | `'BLOCKED'`  | Bloqueado por intentos fallidos u otra razón |
 
 #### Responsabilidades de cada Enum
 
@@ -122,12 +122,12 @@ UserRoleEnum::ensureIsValid('XXX');  // lanza InvalidUserRoleException
 
 Un Value Object es un objeto que representa un concepto del dominio con validación incorporada. **No puede existir en estado inválido** — si el dato es inválido, el constructor lanza una excepción antes de crear el objeto.
 
-| Clase | Reglas que valida |
-|---|---|
-| `UserId` | No puede estar vacío |
-| `UserName` | No puede estar vacío, mínimo 3 caracteres |
-| `UserEmail` | No puede estar vacío, debe ser email válido (RFC), se normaliza a minúsculas |
-| `UserPassword` | No puede estar vacía, mínimo 8 caracteres |
+| Clase          | Reglas que valida                                                            |
+|----------------|------------------------------------------------------------------------------|
+| `UserId`       | No puede estar vacío                                                         |
+| `UserName`     | No puede estar vacío, mínimo 3 caracteres                                    |
+| `UserEmail`    | No puede estar vacío, debe ser email válido (RFC), se normaliza a minúsculas |
+| `UserPassword` | No puede estar vacía, mínimo 8 caracteres                                    |
 
 #### Métodos comunes de todo Value Object
 
@@ -139,12 +139,12 @@ $vo->equals($other);   // compara por valor, no por referencia
 
 #### Métodos especiales de UserPassword
 
-| Método | Cuándo usarlo |
-|---|---|
-| `new UserPassword($hash)` | Constructor interno. Usado con hashes ya generados |
+| Método                              | Cuándo usarlo                                                   |
+|-------------------------------------|-----------------------------------------------------------------|
+| `new UserPassword($hash)`           | Constructor interno. Usado con hashes ya generados              |
 | `UserPassword::fromPlainText($raw)` | Usuario ingresa su contraseña en formulario → hashea con bcrypt |
-| `UserPassword::fromHash($hash)` | Reconstruir usuario desde la base de datos. No re-hashea |
-| `verifyPlain($plain)` | Compara texto plano con el hash almacenado. Retorna `bool` |
+| `UserPassword::fromHash($hash)`     | Reconstruir usuario desde la base de datos. No re-hashea        |
+| `verifyPlain($plain)`               | Compara texto plano con el hash almacenado. Retorna `bool`      |
 
 #### Inmutabilidad
 
@@ -166,14 +166,14 @@ $a->equals($b);   // true  → mismo valor interno
 
 #### Estado interno
 
-| Propiedad | Tipo |
-|---|---|
-| `$id` | `UserId` |
-| `$name` | `UserName` |
-| `$email` | `UserEmail` |
-| `$password` | `UserPassword` |
-| `$role` | `string` (validado por `UserRoleEnum`) |
-| `$status` | `string` (validado por `UserStatusEnum`) |
+| Propiedad   | Tipo                                     |
+|-------------|------------------------------------------|
+| `$id`       | `UserId`                                 |
+| `$name`     | `UserName`                               |
+| `$email`    | `UserEmail`                              |
+| `$password` | `UserPassword`                           |
+| `$role`     | `string` (validado por `UserRoleEnum`)   |
+| `$status`   | `string` (validado por `UserStatusEnum`) |
 
 #### Constructor vs `create()`
 
@@ -195,16 +195,16 @@ $userActivo = $user->activate();      // status = ACTIVE
 // $user sigue siendo PENDING
 ```
 
-| Método | Resultado |
-|---|---|
-| `activate()` | Nuevo `UserModel` con `status = ACTIVE` |
-| `deactivate()` | Nuevo `UserModel` con `status = INACTIVE` |
-| `block()` | Nuevo `UserModel` con `status = BLOCKED` |
-| `changeName($name)` | Nuevo `UserModel` con el nombre actualizado |
-| `changeEmail($email)` | Nuevo `UserModel` con el email actualizado |
-| `changePassword($password)` | Nuevo `UserModel` con la contraseña actualizada |
-| `changeRole($role)` | Nuevo `UserModel` con el rol actualizado |
-| `toArray()` | Array con los valores primitivos de todas las propiedades |
+| Método                      | Resultado                                                 |
+|-----------------------------|-----------------------------------------------------------|
+| `activate()`                | Nuevo `UserModel` con `status = ACTIVE`                   |
+| `deactivate()`              | Nuevo `UserModel` con `status = INACTIVE`                 |
+| `block()`                   | Nuevo `UserModel` con `status = BLOCKED`                  |
+| `changeName($name)`         | Nuevo `UserModel` con el nombre actualizado               |
+| `changeEmail($email)`       | Nuevo `UserModel` con el email actualizado                |
+| `changePassword($password)` | Nuevo `UserModel` con la contraseña actualizada           |
+| `changeRole($role)`         | Nuevo `UserModel` con el rol actualizado                  |
+| `toArray()`                 | Array con los valores primitivos de todas las propiedades |
 
 ---
 
@@ -222,11 +222,11 @@ $event->payload();     // abstracto → cada evento implementa sus propios datos
 
 #### Eventos del proyecto
 
-| Clase | Evento | Recibe | Datos en payload |
-|---|---|---|---|
+| Clase                    | Evento         | Recibe      | Datos en payload              |
+|--------------------------|----------------|-------------|-------------------------------|
 | `UserCreatedDomainEvent` | `user.created` | `UserModel` | id, name, email, role, status |
 | `UserUpdatedDomainEvent` | `user.updated` | `UserModel` | id, name, email, role, status |
-| `UserDeletedDomainEvent` | `user.deleted` | `UserId` | id |
+| `UserDeletedDomainEvent` | `user.deleted` | `UserId`    | id                            |
 
 > `UserDeletedDomainEvent` solo recibe `UserId` porque cuando un usuario se elimina el modelo ya no existe — solo importa su ID.
 
@@ -270,3 +270,141 @@ Activado en todos los archivos del dominio. Impide que PHP realice conversiones 
 // Con strict_types=1 activo en el archivo que llama:
 suma("3", "2"); // ❌ TypeError — no acepta strings aunque parezcan números
 ```
+
+
+---
+
+# Guia 03 - Applicacion
+
+## ¿Qué es la Capa de Aplicación?
+
+La capa de aplicación es el pegamento entre el mundo exterior (controladores, CLI, APIs) y el corazón del software (el Dominio). Sigue los principios de la Arquitectura Hexagonal y es responsable de **orquestar los casos de uso del sistema**.
+
+Recibe datos de entrada, delega las validaciones y reglas de negocio al Dominio, interactúa con la infraestructura a través de contratos (puertos) y retorna resultados.
+
+### Reglas absolutas de la Capa de Aplicación
+
+> **No contiene lógica de negocio** ni conoce tecnologías concretas. Ningún servicio usa `echo`, `header()`, `PDO`, `$_POST`, `$_GET`, ni frameworks específicos. Solo coordina el flujo de información.
+
+---
+
+```text
+app/Application/
+├── Ports/
+│   ├── In/
+│   │   ├── CreateUserUseCase.php
+│   │   ├── UpdateUserUseCase.php
+│   │   ├── DeleteUserUseCase.php
+│   │   ├── GetUserByIdUseCase.php
+│   │   ├── GetAllUsersUseCase.php
+│   │   └── LoginUseCase.php
+│   └── Out/
+│       ├── SaveUserPort.php
+│       ├── UpdateUserPort.php
+│       ├── DeleteUserPort.php
+│       ├── GetUserByIdPort.php
+│       ├── GetUserByEmailPort.php
+│       └── GetAllUsersPort.php
+└── Services/
+    ├── Dto/
+    │   ├── Commands/
+    │   │   ├── CreateUserCommand.php
+    │   │   ├── UpdateUserCommand.php
+    │   │   ├── DeleteUserCommand.php
+    │   │   └── LoginCommand.php
+    │   └── Queries/
+    │       ├── GetUserByIdQuery.php
+    │       └── GetAllUsersQuery.php
+    ├── UseCases/
+    │   ├── CreateUserService.php
+    │   ├── UpdateUserService.php
+    │   ├── DeleteUserService.php
+    │   ├── GetUserByIdService.php
+    │   ├── GetAllUsersService.php
+    │   └── LoginService.php
+    └── UserApplicationMapper.php
+```
+
+## Componentes
+
+1. DTOs — Data Transfer Objects (CQRS Aplicado)
+
+    Se aplica el principio de segregación CQRS (Command Query Responsibility Segregation). Los DTOs se dividen estrictamente en operaciones que modifican el estado (Commands) y operaciones que solo leen (Queries). Son objetos anémicos: solo tienen constructor y getters, sin lógica.
+    
+    * **Commands (Escritura)**
+    
+    | Archivo           | Propósito                                    |
+    |-------------------|----------------------------------------------|
+    | CreateUserCommand | Transporta datos para crear un usuario.      |
+    | UpdateUserCommand | Transporta datos para actualizar un usuario. |
+    | DeleteUserCommand | Transporta el ID del usuario a eliminar.     |
+    | LoginCommand      | Transporta credenciales de autenticación     |
+
+    * **Queries (Lectura)**
+
+    | Archivo          | Propósito                                                         |
+    |------------------|-------------------------------------------------------------------|
+    | GetUserByIdQuery | Transporta el ID del usuario a consultar.                         |
+    | GetAllUsersQuery | Representa la intención de listar todos los usuarios (sin datos). |
+        
+2. Puertos — Contratos del Hexágono
+
+    Los puertos son interfaces que definen cómo la aplicación se comunica con el exterior y viceversa.
+    - **Regla de oro:** Los puertos de salida usan tipos del dominio en sus firmas (`UserId`, `UserEmail`, `UserModel`), nunca tipos primitivos sueltos o arrays. Esto garantiza que cualquier dato que viaje a la infraestructura ya fue validado por el dominio.
+
+    **Puertos de Salida (Ports/Out)**
+    Exigen a la infraestructura lo que la aplicación necesita para funcionar (ej. persistencia).
+
+    | Interfaz           | Método                       | Retorno      |
+    |--------------------|------------------------------|--------------|
+    | SaveUserPort       | save(UserModel $user)        | UserModel    |
+    | UpdateUserPort     | update(UserModel $user)      | UserModel    |
+    | DeleteUserPort     | delete(UserId $id)           | void         |
+    | GetUserByIdPort    | getById(UserId $id)          | ?UserModel   |
+    | GetUserByEmailPort | getByEmail(UserEmail $email) | ?UserModel   |
+    | GetAllUsersPort    | getAll()                     | UserModel[]  |
+
+   **Puertos de Entrada (Ports/In)**
+   Exponen las acciones del sistema hacia el exterior (Controladores). El entrypoint solo conoce estas interfaces, nunca las implementaciones concretas.
+   
+    | Interfaz             | Firma                                          |
+    |----------------------|------------------------------------------------|
+    | `CreateUserUseCase`  | execute(CreateUserCommand $command): UserModel |
+    | `UpdateUserUseCase`  | execute(UpdateUserCommand $command): UserModel |  
+    | `DeleteUserUseCase`  | execute(DeleteUserCommand $command): void      |
+    | `GetUserByIdUseCase` | execute(GetUserByIdQuery $query): UserModel    |
+    | `GetAllUsersUseCase` | execute(GetAllUsersQuery $query): UserModel[]  |
+    | `LoginUseCase`       | execute(LoginCommand $command): UserModel      |
+
+3. Mapper — Transformador de datos
+
+   `UserApplicationMapper` es responsable de transformar DTOs (Commands/Queries) en objetos del Dominio y viceversa.
+   Al extraer esta lógica, los servicios quedan limpios y el mapper se vuelve testeable de forma completamente independiente. Sus métodos son estáticos.
+
+   | Método                       | Entrada → Salida                  |
+   |------------------------------|-----------------------------------|
+   | fromCreateCommandToModel     | `CreateUserCommand` → `UserModel` | 
+   | fromUpdateCommandToModel     | `UpdateUserCommand` → `UserModel` | 
+   | fromGetUserByIdQueryToUserId | `GetUserByIdQuery` → `UserId`     |
+   | fromDeleteCommandToUserId    | `DeleteUserCommand` → `UserId`    |
+   | fromModelToArray             | `UserModel` → `array`             |
+   | fromModelsToArray            | `UserModel[]` → `array[]`         |
+    
+4. Servicios de Aplicación — Los Casos de Uso
+
+   Son las implementaciones concretas de los _Ports/In_. Reciben sus dependencias (los _Ports/Out_) a través del constructor (Inyección de Dependencias) y nunca instancian infraestructura directamente.
+   
+    | Servicio           | Lógica destacada de orquestación                                                                            |
+    |--------------------|-------------------------------------------------------------------------------------------------------------|
+    | CreateUserService  | Verifica duplicidad del email a través del puerto antes de guardar.                                         |
+    | UpdateUserService  | Verifica existencia del usuario + unicidad del nuevo email + conserva el hash si la contraseña viene vacía. |
+    | DeleteUserService  | Verifica existencia del usuario antes de eliminar.                                                          |
+    | GetUserByIdService | Lanza UserNotFoundException si el usuario no existe.                                                        |
+    | GetAllUsersService | "Delega directamente al puerto, sin lógica adicional."                                                      |
+    | LoginService       | Valida credenciales y estado de cuenta (ACTIVE) en un único bloque.                                         |
+
+## Decisiones de Diseño Críticas
+
+1. **Contraseña en edición**: UpdateUserService detecta si el campo contraseña en el Command viene vacío. De ser así, consulta el usuario actual y reutiliza el hash existente. Esto evita forzar al usuario a reingresar su contraseña en cada edición de perfil.
+2. **Seguridad en login**: LoginService unifica los errores de "usuario no encontrado" y "contraseña incorrecta" lanzando siempre una única excepción genérica: InvalidCredentialsException. Esto es una medida de seguridad vital para evitar ataques de enumeración (no revela a un atacante si un email está registrado o no).
+3. **Separación de responsabilidades (Servicio vs Mapper)**: El servicio orquesta la acción (llama a puertos, verifica reglas), mientras que el mapper solo transforma la forma de los datos. Esta estricta separación hace que ambas clases cumplan el principio de Responsabilidad Única (SRP).
