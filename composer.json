@@ -1,5 +1,5 @@
 {
-  "name": "vendor_name/desarrollo-web",
+  "name": "kgomez/desarrollo-web",
   "description": "description",
   "minimum-stability": "stable",
   "license": "proprietary",
@@ -10,6 +10,7 @@
     }
   ],
   "require": {
+    "ext-pdo": "*"
   },
   "autoload": {
     "psr-4": {
