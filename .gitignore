@@ -1,5 +1,8 @@
 .idea
+.vscode
 
+vendor
 composer.phar
-composer.lock
-vendor/
+
+# Environment file with local secrets
+.env

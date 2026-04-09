@@ -1,0 +1,9 @@
+# Deshabilita el listado de directorios
+Options -Indexes
+RewriteEngine On
+# Las peticiones a public/ pasan directamente
+RewriteRule ^public/ - [L]
+# Los archivos estáticos (CSS, JS, imágenes) se sirven directamente
+RewriteRule \.(css|js|png|jpg|...)$ - [L,NC]
+# TODO lo demás se reescribe internamente hacia public/index.php
+RewriteRule ^ public/index.php [L]
