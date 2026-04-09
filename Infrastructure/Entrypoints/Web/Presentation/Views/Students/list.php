@@ -25,7 +25,7 @@
                 <td><?= htmlspecialchars($student->getName(), ENT_QUOTES, 'UTF-8') ?></td>
                 <td><?= htmlspecialchars($student->getLastName(), ENT_QUOTES, 'UTF-8') ?></td>
                 <td>
-                    <a class="btn btn-sm" href="?route=studentss.show&id=<?= urlencode($student->getId()) ?>">Ver</a>
+                    <a class="btn btn-sm" href="?route=students.show&id=<?= urlencode($student->getId()) ?>">Ver</a>
                     <a class="btn btn-sm btn-warning" href="?route=students.edit&id=<?= urlencode($student->getId()) ?>">Editar</a>
                     <form method="POST" action="?route=students.delete" style="display:inline"
                           onsubmit="return confirm('¿Eliminar este estudiante?')">

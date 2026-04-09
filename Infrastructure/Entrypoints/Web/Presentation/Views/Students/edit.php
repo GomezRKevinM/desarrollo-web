@@ -21,7 +21,7 @@
         </div>
 
         <div class="form-group">
-            <label for="lastName">Correo</label><br>
+            <label for="lastName">Apellidos</label><br>
             <input type="text" id="lastName" name="lastName"
                    value="<?= htmlspecialchars($old['lastName'] ?? $student->getLastName(), ENT_QUOTES, 'UTF-8') ?>">
             <?php if (!empty($errors['lastName'])): ?>

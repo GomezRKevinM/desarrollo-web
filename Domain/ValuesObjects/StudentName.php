@@ -17,6 +17,7 @@ class StudentName
         if ($normalized === '') {
             throw InvalidStudentNameException::becauseValueIsEmpty();
         }
+        $this->value = $normalized;
     }
 
     public function value(): string
@@ -24,7 +25,7 @@ class StudentName
         return $this->value;
     }
 
-    public function equals(UserName $other): bool
+    public function equals(StudentName $other): bool
     {
         return $this->value === $other->value();
     }

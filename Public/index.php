@@ -14,6 +14,9 @@ use App\Infrastructure\Entrypoints\Web\Controllers\Config\WebRoutes;
 use App\Infrastructure\Entrypoints\Web\Controllers\Dto\CreateUserWebRequest;
 use App\Infrastructure\Entrypoints\Web\Controllers\Dto\UpdateUserWebRequest;
 use App\Infrastructure\Entrypoints\Web\Controllers\Dto\UserResponse;
+use App\Infrastructure\Entrypoints\Web\Controllers\Dto\CreateStudentWebRequest;
+use App\Infrastructure\Entrypoints\Web\Controllers\Dto\UpdateStudentWebRequest;
+use App\Infrastructure\Entrypoints\Web\Controllers\Dto\StudentResponse;
 use App\Infrastructure\Entrypoints\Web\Presentation\Flash;
 use App\Infrastructure\Entrypoints\Web\Presentation\View;
 
@@ -95,6 +98,11 @@ try {
             View::render('users/create', buildCreateUserViewData());
             break;
 
+        // ── Crear estudiante (formulario) ─────────────────────────────────────
+        case 'students.create':
+            View::render('students/create', buildCreateStudentViewData());
+            break;
+
         // ── Crear usuario (submit) ─────────────────────────────────────────
         case 'store':
             $form           = getCreateUserFormData();
@@ -119,6 +127,86 @@ try {
             DependencyInjection::getUserController()->store($request);
             Flash::setSuccess('Usuario registrado correctamente.');
             View::redirect('users.index');
+            break;
+
+        // ── Crear estudiante (submit) ─────────────────────────────────────────
+        case 'students.store':
+            $form           = getCreateStudentFormData();
+            $form['id']     = generateUuid4();
+            $errors         = validateCreateStudentForm($form);
+
+            if (!empty($errors)) {
+                Flash::setOld($form);
+                Flash::setErrors($errors);
+                Flash::setMessage('Corrige los errores del formulario.');
+                View::redirect('students.create');
+            }
+
+            $request = new CreateStudentWebRequest(
+                id:       $form['id'],
+                name:     $form['name'],
+                lastName: $form['lastName'],
+            );
+
+            DependencyInjection::getStudentController()->store($request);
+            Flash::setSuccess('Estudiante registrado correctamente.');
+            View::redirect('students.index');
+            break;
+
+        // ── Listar estudiantes ────────────────────────────────────────────────
+        case 'students.index':
+            $students = DependencyInjection::getStudentController()->index();
+            View::render('students/list', buildListStudentsViewData($students));
+            break;
+
+        // ── Ver estudiante ────────────────────────────────────────────────────
+        case 'students.show':
+            $id      = isset($_GET['id']) ? trim((string) $_GET['id']) : '';
+            $student = DependencyInjection::getStudentController()->show($id);
+            View::render('students/show', [
+                'pageTitle' => 'Detalle de estudiante',
+                'student'   => $student,
+                'message'   => Flash::message(),
+            ]);
+            break;
+
+        // ── Editar estudiante (formulario) ────────────────────────────────────
+        case 'students.edit':
+            $id      = isset($_GET['id']) ? trim((string) $_GET['id']) : '';
+            $student = DependencyInjection::getStudentController()->show($id);
+            View::render('students/edit', buildEditStudentViewData($student));
+            break;
+
+        // ── Editar estudiante (submit) ────────────────────────────────────────
+        case 'students.update':
+            $form   = getUpdateStudentFormData();
+            $errors = validateUpdateStudentForm($form);
+
+            if (!empty($errors)) {
+                Flash::setOld($form);
+                Flash::setErrors($errors);
+                Flash::setMessage('Corrige los errores del formulario.');
+                header('Location: ?route=students.edit&id=' . urlencode($form['id']));
+                exit;
+            }
+
+            $request = new UpdateStudentWebRequest(
+                id:       $form['id'],
+                name:     $form['name'],
+                lastName: $form['lastName'],
+            );
+
+            DependencyInjection::getStudentController()->update($request);
+            Flash::setSuccess('Estudiante actualizado correctamente.');
+            View::redirect('students.index');
+            break;
+
+        // ── Eliminar estudiante ───────────────────────────────────────────────
+        case 'students.delete':
+            $id = isset($_POST['id']) ? trim((string) $_POST['id']) : '';
+            DependencyInjection::getStudentController()->delete($id);
+            Flash::setSuccess('Estudiante eliminado correctamente.');
+            View::redirect('students.index');
             break;
 
         // ── Listar usuarios ────────────────────────────────────────────────
@@ -307,6 +395,20 @@ try {
         case 'users.delete':
             View::redirect('users.index');
             break;
+        case 'students.store':
+            Flash::setOld(getCreateStudentFormData());
+            View::redirect('students.create');
+            break;
+        case 'students.update':
+            $updateId = trim((string) ($_POST['id'] ?? ''));
+            Flash::setOld(getUpdateStudentFormData());
+            header('Location: ?route=students.edit&id=' . urlencode($updateId));
+            exit;
+        case 'students.show':
+        case 'students.edit':
+        case 'students.delete':
+            View::redirect('students.index');
+            break;
         default:
             View::render('home', buildHomeViewData($msg));
             break;
@@ -358,6 +460,18 @@ function buildCreateUserViewData(): array
     ];
 }
 
+/** @return array<string, mixed> */
+function buildCreateStudentViewData(): array
+{
+    return [
+        'pageTitle'   => 'Registrar estudiante',
+        'message'     => Flash::message(),
+        'success'     => Flash::success(),
+        'errors'      => Flash::errors(),
+        'old'         => Flash::old(),
+    ];
+}
+
 /**
  * @param  UserResponse[]       $users
  * @return array<string, mixed>
@@ -367,6 +481,20 @@ function buildListUsersViewData(array $users): array
     return [
         'pageTitle' => 'Lista de usuarios',
         'users'     => $users,
+        'message'   => Flash::message(),
+        'success'   => Flash::success(),
+    ];
+}
+
+/**
+ * @param  StudentResponse[] $students
+ * @return array<string, mixed>
+ */
+function buildListStudentsViewData(array $students): array
+{
+    return [
+        'pageTitle' => 'Lista de estudiantes',
+        'students'     => $students,
         'message'   => Flash::message(),
         'success'   => Flash::success(),
     ];
@@ -386,6 +514,18 @@ function buildEditUserViewData(UserResponse $user): array
     ];
 }
 
+/** @return array<string, mixed> */
+function buildEditStudentViewData(StudentResponse $student): array
+{
+    return [
+        'pageTitle'   => 'Editar estudiante',
+        'student'     => $student,
+        'message'     => Flash::message(),
+        'errors'      => Flash::errors(),
+        'old'         => Flash::old(),
+    ];
+}
+
 // ── Lectores de formulario ────────────────────────────────────────────────────
 /** @return array<string, string> */
 function getCreateUserFormData(): array
@@ -399,6 +539,15 @@ function getCreateUserFormData(): array
 }
 
 /** @return array<string, string> */
+function getCreateStudentFormData(): array
+{
+    return [
+        'name'     => isset($_POST['name'])     ? trim((string) $_POST['name'])     : '',
+        'lastName' => isset($_POST['lastName']) ? trim((string) $_POST['lastName']) : '',
+    ];
+}
+
+/** @return array<string, string> */
 function getUpdateUserFormData(): array
 {
     return [
@@ -408,6 +557,16 @@ function getUpdateUserFormData(): array
         'password' => isset($_POST['password']) ? (string) $_POST['password']       : '',
         'role'     => isset($_POST['role'])     ? trim((string) $_POST['role'])     : '',
         'status'   => isset($_POST['status'])   ? trim((string) $_POST['status'])   : '',
+    ];
+}
+
+/** @return array<string, string> */
+function getUpdateStudentFormData(): array
+{
+    return [
+        'id'       => isset($_POST['id'])       ? trim((string) $_POST['id'])       : '',
+        'name'     => isset($_POST['name'])     ? trim((string) $_POST['name'])     : '',
+        'lastName' => isset($_POST['lastName']) ? trim((string) $_POST['lastName']) : '',
     ];
 }
 
@@ -444,6 +603,24 @@ function validateCreateUserForm(array $form): array
  * @param  array<string, string> $form
  * @return array<string, string>
  */
+function validateCreateStudentForm(array $form): array
+{
+    $errors = [];
+
+    if ($form['name'] === '') {
+        $errors['name'] = 'El nombre es obligatorio.';
+    }
+    if ($form['lastName'] === '') {
+        $errors['lastName'] = 'El apellido es obligatorio.';
+    }
+
+    return $errors;
+}
+
+/**
+ * @param  array<string, string> $form
+ * @return array<string, string>
+ */
 function validateUpdateUserForm(array $form): array
 {
     $errors = [];
@@ -464,6 +641,24 @@ function validateUpdateUserForm(array $form): array
     }
     if ($form['status'] === '') {
         $errors['status'] = 'El estado es obligatorio.';
+    }
+
+    return $errors;
+}
+
+/**
+ * @param  array<string, string> $form
+ * @return array<string, string>
+ */
+function validateUpdateStudentForm(array $form): array
+{
+    $errors = [];
+
+    if ($form['name'] === '') {
+        $errors['name'] = 'El nombre es obligatorio.';
+    }
+    if ($form['lastName'] === '') {
+        $errors['lastName'] = 'El apellido es obligatorio.';
     }
 
     return $errors;
