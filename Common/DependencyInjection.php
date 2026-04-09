@@ -4,23 +4,37 @@ declare(strict_types=1);
 
 namespace App\Common;
 
+use App\Application\Ports\In\CreateStudentUseCase;
 use App\Application\Ports\In\CreateUserUseCase;
 use App\Application\Ports\In\DeleteUserUseCase;
+use App\Application\Ports\In\GetAllStudentsUseCase;
 use App\Application\Ports\In\GetAllUsersUseCase;
 use App\Application\Ports\In\GetByUserIdUseCase;
 use App\Application\Ports\In\LoginUseCase;
+use App\Application\Ports\In\UpdateStudentUseCase;
+use App\Application\Ports\In\DeleteStudentUseCase;
+use App\Application\Ports\In\GetByStudentIdUseCase;
 use App\Application\Ports\In\UpdateUserUseCase;
+use App\Application\Services\CreateStudentService;
 use App\Application\Services\CreateUSerService;
 use App\Application\Services\DeleteUserService;
+use App\Application\Services\DeleteStudentService;
 use App\Application\Services\GetAllUsersService;
+use App\Application\Services\GetAllStudentsService;
 use App\Application\Services\GetUserByIdService;
+use App\Application\Services\GetStudentByIdService;
 use App\Application\Services\LoginService;
 use App\Application\Services\UpdateUserService;
+use App\Application\Services\UpdateStudentService;
 use App\Infrastructure\Adapters\Persistence\MySQL\Config\Connection;
+use App\Infrastructure\Adapters\Persistence\MySQL\Mapper\StudentPersistenceMapper;
 use App\Infrastructure\Adapters\Persistence\MySQL\Mapper\UserPersistenceMapper;
+use App\Infrastructure\Adapters\Persistence\MySQL\Repository\StudentRepositoryMySQL;
 use App\Infrastructure\Adapters\Persistence\MySQL\Repository\UserRepositoryMySQL;
+use App\Infrastructure\Entrypoints\Web\Controllers\StudentController;
 use App\Infrastructure\Entrypoints\Web\Controllers\UserController;
 use App\Infrastructure\Entrypoints\Web\Controllers\Mapper\UserWebMapper;
+use App\Infrastructure\Entrypoints\Web\Controllers\Mapper\StudentWebMapper;
 use RuntimeException;
 
 final class DependencyInjection
@@ -100,6 +114,14 @@ final class DependencyInjection
         );
     }
 
+    public static function getStudentRepository(): StudentRepositoryMySQL
+    {
+        return new StudentRepositoryMySQL(
+            pdo: self::getConnection()->createPDO(),
+            mapper: new StudentPersistenceMapper(),
+        );
+    }
+
     public static function getCreateUserUseCase(): CreateUserUseCase
     {
         $repo = self::getUserRepository();
@@ -144,4 +166,45 @@ final class DependencyInjection
             mapper:             new UserWebMapper(),
         );
     }
+
+    public static function getCreateStudentUseCase(): CreateStudentUseCase
+    {
+        $repo = self::getStudentRepository();
+        return new CreateStudentService($repo, $repo);
+    }
+
+    public static function getUpdateStudentUseCase(): UpdateStudentUseCase
+    {
+        $repo = self::getStudentRepository();
+        return new UpdateStudentService($repo, $repo, $repo);
+    }
+
+    public static function getGetStudentByIdUseCase(): GetByStudentIdUseCase
+    {
+        return new GetStudentByIdService(self::getStudentRepository());
+    }
+
+    public static function getGetAllStudentsUseCase(): GetAllStudentsUseCase
+    {
+        return new GetAllStudentsService(self::getStudentRepository());
+    }
+
+    public static function getDeleteStudentUseCase(): DeleteStudentUseCase
+    {
+        $repo = self::getStudentRepository();
+        return new DeleteStudentService($repo, $repo);
+    }
+
+    public static function getStudentController(): StudentController
+    {
+        return new StudentController(
+            createStudentUseCase:  self::getCreateStudentUseCase(),
+            updateStudentUseCase:  self::getUpdateStudentUseCase(),
+            getStudentByIdUseCase: self::getGetStudentByIdUseCase(),
+            getAllStudentsUseCase:  self::getGetAllStudentsUseCase(),
+            deleteStudentUseCase:  self::getDeleteStudentUseCase(),
+            mapper:             new StudentWebMapper(),
+        );
+    }
+
 }
