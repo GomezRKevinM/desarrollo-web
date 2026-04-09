@@ -418,7 +418,7 @@ try {
 // ── Helpers de email ──────────────────────────────────────────────────────────
 function sendPasswordRecoveryEmail(string $email, string $name, string $tempPassword): void
 {
-    $templateFile = __DIR__ . '/../crud-usuarios/Infrastructure/Entrypoints/Web/Presentation/Views/emails/forgot-password.php';
+    $templateFile = __DIR__ . '/../Infrastructure/Entrypoints/Web/Presentation/Views/Emails/forgot-password.php';
 
     ob_start();
     extract(['email' => $email, 'name' => $name, 'tempPassword' => $tempPassword], EXTR_SKIP);

@@ -8,7 +8,6 @@ $route = $_GET['route'];
     <meta charset="UTF-8">
     <title><?= htmlspecialchars($pageTitle ?? 'CRUD Usuarios', ENT_QUOTES, 'UTF-8') ?></title>
     <link rel="stylesheet" href="./assets/styles/home.css">
-    <link rel="stylesheet" href="./assets/styles/<?= $route ?>.css">
 
 </head>
 <body>
