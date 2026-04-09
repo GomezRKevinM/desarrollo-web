@@ -31,8 +31,6 @@ final class StudentApplicationMapper
 
     /**
      * Construye un StudentModel para ACTUALIZAR.
-     * Nota: la contraseña llega como plain text; UpdateStudentService
-     * decide si hashearla o reutilizar el hash existente ANTES de llamar a este método.
      */
     public static function fromUpdateCommandToModel(UpdateStudentCommand $command): StudentModel
     {
