@@ -618,13 +618,1518 @@ Ambas dependencias se inyectan. El repositorio no crea su propia conexión.
 
 ---
 
-## Checklist de verificación
+# Guía 05 — Capa de Infraestructura: Entrypoints Web
 
-- [ ] El DSN de `Connection` incluye `charset=utf8mb4`
-- [ ] PDO está configurado con `ERRMODE_EXCEPTION` y `FETCH_ASSOC`
-- [ ] Todos los SQLs con datos del usuario usan parámetros nombrados (`:parametro`), nunca concatenación de strings
-- [ ] `save()` y `update()` llaman a `getById()` al final para retornar el estado real de la BD
-- [ ] `getById()` y `getByEmail()` retornan `null` cuando no encuentran, no lanzan excepción
-- [ ] `getAll()` ordena por nombre
-- [ ] `UserRepositoryMySQL` no tiene lógica de negocio (no verifica duplicados, no lanza `UserNotFoundException`)
-- [ ] `UserPersistenceMapper::fromEntityToModel()` usa `UserPassword::fromHash()` para no re-hashear el bcrypt almacenado
+**Proyecto:** Aplicación Web básica sobre PHP y MySQL aplicando arquitectura hexagonal y DDD  
+**Tutor:** John Carlos Arrieta Arrieta  
+**Documento:** 05 — Entrypoints Web, Common y el Punto de Entrada
+
+---
+
+## Estructura de carpetas construida
+
+```
+/ (raíz del proyecto)
+├── composer.json
+├── .htaccess
+├── Common/
+│   └── DependencyInjection.php
+├── public/
+│   └── index.php
+└── crud-usuarios/
+    └── Infrastructure/
+        └── Entrypoints/
+            └── Web/
+                ├── Controllers/
+                │   ├── Config/
+                │   │   └── WebRoutes.php
+                │   ├── Dto/
+                │   │   ├── CreateUserWebRequest.php
+                │   │   ├── UpdateUserWebRequest.php
+                │   │   ├── LoginWebRequest.php
+                │   │   └── UserResponse.php
+                │   ├── Mapper/
+                │   │   └── UserWebMapper.php
+                │   └── UserController.php
+                └── Presentation/
+                    ├── Flash.php
+                    ├── View.php
+                    └── Views/
+                        ├── layouts/
+                        │   ├── header.php
+                        │   ├── menu.php
+                        │   └── footer.php
+                        ├── home.php
+                        ├── users/
+                        │   ├── create.php
+                        │   ├── list.php
+                        │   ├── show.php
+                        │   └── edit.php
+                        └── auth/
+                            ├── login.php
+                            └── forgot-password.php
+```
+
+---
+
+## `Common/DependencyInjection.php`
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace App\Common;
+
+use App\crud_usuarios\Application\Ports\In\CreateUserUseCase;
+use App\crud_usuarios\Application\Ports\In\DeleteUserUseCase;
+use App\crud_usuarios\Application\Ports\In\GetAllUsersUseCase;
+use App\crud_usuarios\Application\Ports\In\GetByUserIdUseCase;
+use App\crud_usuarios\Application\Ports\In\LoginUseCase;
+use App\crud_usuarios\Application\Ports\In\UpdateUserUseCase;
+use App\crud_usuarios\Application\Services\CreateUSerService;
+use App\crud_usuarios\Application\Services\DeleteUserService;
+use App\crud_usuarios\Application\Services\GetAllUsersService;
+use App\crud_usuarios\Application\Services\GetUserByIdService;
+use App\crud_usuarios\Application\Services\LoginService;
+use App\crud_usuarios\Application\Services\UpdateUserService;
+use App\crud_usuarios\Infrastructure\Adapters\Persistence\MySQL\Config\Connection;
+use App\crud_usuarios\Infrastructure\Adapters\Persistence\MySQL\Mapper\UserPersistenceMapper;
+use App\crud_usuarios\Infrastructure\Adapters\Persistence\MySQL\Repository\UserRepositoryMySQL;
+use App\crud_usuarios\Infrastructure\Entrypoints\Web\Controllers\Mapper\UserWebMapper;
+use App\crud_usuarios\Infrastructure\Entrypoints\Web\Controllers\UserController;
+
+final class DependencyInjection
+{
+    private static function getConnection(): Connection
+    {
+        return new Connection(
+            host: '127.0.0.1',
+            port: '3306',
+            database: 'crud_usuarios',
+            username: 'root',
+            password: '',
+        );
+    }
+
+    public static function getUserRepository(): UserRepositoryMySQL
+    {
+        return new UserRepositoryMySQL(
+            pdo:    self::getConnection()->createPDO(),
+            mapper: new UserPersistenceMapper(),
+        );
+    }
+
+    public static function getCreateUserUseCase(): CreateUserUseCase
+    {
+        $repo = self::getUserRepository();
+        return new CreateUSerService($repo, $repo);
+    }
+
+    public static function getUpdateUserUseCase(): UpdateUserUseCase
+    {
+        $repo = self::getUserRepository();
+        return new UpdateUserService($repo, $repo, $repo);
+    }
+
+    public static function getDeleteUserUseCase(): DeleteUserUseCase
+    {
+        $repo = self::getUserRepository();
+        return new DeleteUserService($repo, $repo);
+    }
+
+    public static function getGetUserByIdUseCase(): GetByUserIdUseCase
+    {
+        return new GetUserByIdService(self::getUserRepository());
+    }
+
+    public static function getGetAllUsersUseCase(): GetAllUsersUseCase
+    {
+        return new GetAllUsersService(self::getUserRepository());
+    }
+
+    public static function getLoginUseCase(): LoginUseCase
+    {
+        return new LoginService(self::getUserRepository());
+    }
+
+    public static function getUserController(): UserController
+    {
+        return new UserController(
+            createUserUseCase:  self::getCreateUserUseCase(),
+            updateUserUseCase:  self::getUpdateUserUseCase(),
+            getUserByIdUseCase: self::getGetUserByIdUseCase(),
+            getAllUsersUseCase:  self::getGetAllUsersUseCase(),
+            deleteUserUseCase:  self::getDeleteUserUseCase(),
+            mapper:             new UserWebMapper(),
+        );
+    }
+}
+```
+
+---
+
+## DTOs Web
+
+### `Controllers/Dto/CreateUserWebRequest.php`
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace App\crud_usuarios\Infrastructure\Entrypoints\Web\Controllers\Dto;
+
+final class CreateUserWebRequest
+{
+    public function __construct(
+        private readonly string $id,
+        private readonly string $name,
+        private readonly string $email,
+        private readonly string $password,
+        private readonly string $role,
+    ) {}
+
+    public function getId(): string       { return $this->id; }
+    public function getName(): string     { return $this->name; }
+    public function getEmail(): string    { return $this->email; }
+    public function getPassword(): string { return $this->password; }
+    public function getRole(): string     { return $this->role; }
+}
+```
+
+### `Controllers/Dto/UpdateUserWebRequest.php`
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace App\crud_usuarios\Infrastructure\Entrypoints\Web\Controllers\Dto;
+
+final class UpdateUserWebRequest
+{
+    public function __construct(
+        private readonly string $id,
+        private readonly string $name,
+        private readonly string $email,
+        private readonly string $password,
+        private readonly string $role,
+        private readonly string $status,
+    ) {}
+
+    public function getId(): string       { return $this->id; }
+    public function getName(): string     { return $this->name; }
+    public function getEmail(): string    { return $this->email; }
+    public function getPassword(): string { return $this->password; }
+    public function getRole(): string     { return $this->role; }
+    public function getStatus(): string   { return $this->status; }
+}
+```
+
+### `Controllers/Dto/LoginWebRequest.php`
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace App\crud_usuarios\Infrastructure\Entrypoints\Web\Controllers\Dto;
+
+final class LoginWebRequest
+{
+    public function __construct(
+        private readonly string $email,
+        private readonly string $password,
+    ) {}
+
+    public function getEmail(): string    { return $this->email; }
+    public function getPassword(): string { return $this->password; }
+}
+```
+
+### `Controllers/Dto/UserResponse.php`
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace App\crud_usuarios\Infrastructure\Entrypoints\Web\Controllers\Dto;
+
+final class UserResponse
+{
+    public function __construct(
+        private readonly string $id,
+        private readonly string $name,
+        private readonly string $email,
+        private readonly string $role,
+        private readonly string $status,
+    ) {}
+
+    public function getId(): string     { return $this->id; }
+    public function getName(): string   { return $this->name; }
+    public function getEmail(): string  { return $this->email; }
+    public function getRole(): string   { return $this->role; }
+    public function getStatus(): string { return $this->status; }
+
+    /** @return array<string, string> */
+    public function toArray(): array
+    {
+        return [
+            'id'     => $this->id,
+            'name'   => $this->name,
+            'email'  => $this->email,
+            'role'   => $this->role,
+            'status' => $this->status,
+        ];
+    }
+}
+```
+
+---
+
+## `Controllers/Mapper/UserWebMapper.php`
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace App\crud_usuarios\Infrastructure\Entrypoints\Web\Controllers\Mapper;
+
+use App\crud_usuarios\Application\Services\Dto\Commands\CreateUserCommand;
+use App\crud_usuarios\Application\Services\Dto\Commands\DeleteUserCommand;
+use App\crud_usuarios\Application\Services\Dto\Commands\LoginCommand;
+use App\crud_usuarios\Application\Services\Dto\Commands\UpdateUserCommand;
+use App\crud_usuarios\Application\Services\Dto\Queries\GetUserByIdQuery;
+use App\crud_usuarios\Domain\Models\UserModel;
+use App\crud_usuarios\Infrastructure\Entrypoints\Web\Controllers\Dto\CreateUserWebRequest;
+use App\crud_usuarios\Infrastructure\Entrypoints\Web\Controllers\Dto\LoginWebRequest;
+use App\crud_usuarios\Infrastructure\Entrypoints\Web\Controllers\Dto\UpdateUserWebRequest;
+use App\crud_usuarios\Infrastructure\Entrypoints\Web\Controllers\Dto\UserResponse;
+
+final class UserWebMapper
+{
+    public function fromCreateRequestToCommand(CreateUserWebRequest $request): CreateUserCommand
+    {
+        return new CreateUserCommand(
+            id:       $request->getId(),
+            name:     $request->getName(),
+            email:    $request->getEmail(),
+            password: $request->getPassword(),
+            role:     $request->getRole(),
+        );
+    }
+
+    public function fromUpdateRequestToCommand(UpdateUserWebRequest $request): UpdateUserCommand
+    {
+        return new UpdateUserCommand(
+            id:       $request->getId(),
+            name:     $request->getName(),
+            email:    $request->getEmail(),
+            password: $request->getPassword(),
+            role:     $request->getRole(),
+            status:   $request->getStatus(),
+        );
+    }
+
+    public function fromLoginRequestToCommand(LoginWebRequest $request): LoginCommand
+    {
+        return new LoginCommand(
+            email:    $request->getEmail(),
+            password: $request->getPassword(),
+        );
+    }
+
+    public function fromIdToGetByIdQuery(string $id): GetUserByIdQuery
+    {
+        return new GetUserByIdQuery($id);
+    }
+
+    public function fromIdToDeleteCommand(string $id): DeleteUserCommand
+    {
+        return new DeleteUserCommand($id);
+    }
+
+    public function fromModelToResponse(UserModel $user): UserResponse
+    {
+        return new UserResponse(
+            id:     $user->id()->value(),
+            name:   $user->name()->value(),
+            email:  $user->email()->value(),
+            role:   $user->role(),
+            status: $user->status(),
+        );
+    }
+
+    /**
+     * @param  UserModel[]   $users
+     * @return UserResponse[]
+     */
+    public function fromModelsToResponses(array $users): array
+    {
+        return array_map(
+            fn(UserModel $user): UserResponse => $this->fromModelToResponse($user),
+            $users,
+        );
+    }
+}
+```
+
+---
+
+## `Controllers/Config/WebRoutes.php`
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace App\crud_usuarios\Infrastructure\Entrypoints\Web\Controllers\Config;
+
+final class WebRoutes
+{
+    /**
+     * @return array<string, array{method: string, action: string}>
+     */
+    public static function routes(): array
+    {
+        return [
+            'home'              => ['method' => 'GET',  'action' => 'home'],
+            'users.create'      => ['method' => 'GET',  'action' => 'create'],
+            'users.store'       => ['method' => 'POST', 'action' => 'store'],
+            'users.index'       => ['method' => 'GET',  'action' => 'index'],
+            'users.show'        => ['method' => 'GET',  'action' => 'show'],
+            'users.edit'        => ['method' => 'GET',  'action' => 'edit'],
+            'users.update'      => ['method' => 'POST', 'action' => 'update'],
+            'users.delete'      => ['method' => 'POST', 'action' => 'delete'],
+            'auth.login'        => ['method' => 'GET',  'action' => 'login'],
+            'auth.authenticate' => ['method' => 'POST', 'action' => 'authenticate'],
+            'auth.logout'       => ['method' => 'GET',  'action' => 'logout'],
+            'auth.forgot'       => ['method' => 'GET',  'action' => 'forgot'],
+            'auth.forgot.send'  => ['method' => 'POST', 'action' => 'forgot.send'],
+        ];
+    }
+}
+```
+
+---
+
+## `Controllers/UserController.php`
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace App\crud_usuarios\Infrastructure\Entrypoints\Web\Controllers;
+
+use App\crud_usuarios\Application\Ports\In\CreateUserUseCase;
+use App\crud_usuarios\Application\Ports\In\DeleteUserUseCase;
+use App\crud_usuarios\Application\Ports\In\GetAllUsersUseCase;
+use App\crud_usuarios\Application\Ports\In\GetByUserIdUseCase;
+use App\crud_usuarios\Application\Ports\In\UpdateUserUseCase;
+use App\crud_usuarios\Application\Services\Dto\Queries\GetAllUsersQuery;
+use App\crud_usuarios\Infrastructure\Entrypoints\Web\Controllers\Dto\CreateUserWebRequest;
+use App\crud_usuarios\Infrastructure\Entrypoints\Web\Controllers\Dto\UpdateUserWebRequest;
+use App\crud_usuarios\Infrastructure\Entrypoints\Web\Controllers\Dto\UserResponse;
+use App\crud_usuarios\Infrastructure\Entrypoints\Web\Controllers\Mapper\UserWebMapper;
+
+final class UserController
+{
+    public function __construct(
+        private readonly CreateUserUseCase  $createUserUseCase,
+        private readonly UpdateUserUseCase  $updateUserUseCase,
+        private readonly GetByUserIdUseCase $getUserByIdUseCase,
+        private readonly GetAllUsersUseCase $getAllUsersUseCase,
+        private readonly DeleteUserUseCase  $deleteUserUseCase,
+        private readonly UserWebMapper      $mapper,
+    ) {}
+
+    /** @return UserResponse[] */
+    public function index(): array
+    {
+        $users = $this->getAllUsersUseCase->execute(new GetAllUsersQuery());
+        return $this->mapper->fromModelsToResponses($users);
+    }
+
+    public function show(string $id): UserResponse
+    {
+        $query = $this->mapper->fromIdToGetByIdQuery($id);
+        $user  = $this->getUserByIdUseCase->execute($query);
+        return $this->mapper->fromModelToResponse($user);
+    }
+
+    public function store(CreateUserWebRequest $request): UserResponse
+    {
+        $command = $this->mapper->fromCreateRequestToCommand($request);
+        $user    = $this->createUserUseCase->execute($command);
+        return $this->mapper->fromModelToResponse($user);
+    }
+
+    public function update(UpdateUserWebRequest $request): UserResponse
+    {
+        $command = $this->mapper->fromUpdateRequestToCommand($request);
+        $user    = $this->updateUserUseCase->execute($command);
+        return $this->mapper->fromModelToResponse($user);
+    }
+
+    public function delete(string $id): void
+    {
+        $command = $this->mapper->fromIdToDeleteCommand($id);
+        $this->deleteUserUseCase->execute($command);
+    }
+}
+```
+
+---
+
+## `Presentation/Flash.php`
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace App\crud_usuarios\Infrastructure\Entrypoints\Web\Presentation;
+
+final class Flash
+{
+    public static function start(): void
+    {
+        if (session_status() !== PHP_SESSION_ACTIVE) {
+            session_start();
+        }
+    }
+
+    public static function set(string $key, mixed $value): void
+    {
+        self::start();
+        $_SESSION['_flash'][$key] = $value;
+    }
+
+    public static function get(string $key, mixed $default = null): mixed
+    {
+        self::start();
+
+        if (!isset($_SESSION['_flash'][$key])) {
+            return $default;
+        }
+
+        $value = $_SESSION['_flash'][$key];
+        unset($_SESSION['_flash'][$key]);
+
+        return $value;
+    }
+
+    /** @param array<string, string> $data */
+    public static function setOld(array $data): void
+    {
+        self::set('old', $data);
+    }
+
+    /** @return array<string, string> */
+    public static function old(): array
+    {
+        $data = self::get('old', []);
+        return is_array($data) ? $data : [];
+    }
+
+    /** @param array<string, string> $errors */
+    public static function setErrors(array $errors): void
+    {
+        self::set('errors', $errors);
+    }
+
+    /** @return array<string, string> */
+    public static function errors(): array
+    {
+        $errors = self::get('errors', []);
+        return is_array($errors) ? $errors : [];
+    }
+
+    public static function setMessage(string $message): void
+    {
+        self::set('message', $message);
+    }
+
+    public static function message(): string
+    {
+        $value = self::get('message', '');
+        return is_string($value) ? $value : '';
+    }
+
+    public static function setSuccess(string $message): void
+    {
+        self::set('success', $message);
+    }
+
+    public static function success(): string
+    {
+        $value = self::get('success', '');
+        return is_string($value) ? $value : '';
+    }
+}
+```
+
+---
+
+## `Presentation/View.php`
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace App\crud_usuarios\Infrastructure\Entrypoints\Web\Presentation;
+
+final class View
+{
+    /** @param array<string, mixed> $data */
+    public static function render(string $template, array $data = []): void
+    {
+        $file = __DIR__ . '/Views/' . $template . '.php';
+
+        if (!file_exists($file)) {
+            throw new \RuntimeException(
+                sprintf('Vista no encontrada: "%s" en %s', $template, $file)
+            );
+        }
+
+        extract($data, EXTR_SKIP);
+        require $file;
+    }
+
+    public static function redirect(string $route): never
+    {
+        header('Location: ?route=' . urlencode($route));
+        exit;
+    }
+}
+```
+
+---
+
+## Vistas
+
+### `Views/layouts/header.php`
+
+```php
+<?php declare(strict_types=1); ?>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><?= htmlspecialchars($pageTitle ?? 'CRUD Usuarios', ENT_QUOTES, 'UTF-8') ?></title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 30px; }
+        nav a { margin-right: 12px; text-decoration: none; }
+        .alert-error   { margin: 12px 0; padding: 10px; border: 1px solid #d33; background: #fdeaea; }
+        .alert-success { margin: 12px 0; padding: 10px; border: 1px solid #2d8a34; background: #eaf8ec; }
+        .field-error   { color: #c00; font-size: 0.9rem; margin-top: 3px; }
+        .form-group    { margin-bottom: 14px; }
+        label          { display: inline-block; margin-bottom: 4px; }
+        input, select  { min-width: 280px; padding: 6px; }
+        table          { border-collapse: collapse; }
+        table th, table td { padding: 8px 12px; border: 1px solid #ccc; text-align: left; }
+        table.detail-table th { background: #f5f5f5; width: 140px; }
+        .btn         { display: inline-block; padding: 5px 12px; text-decoration: none;
+                       cursor: pointer; border: none; border-radius: 3px; font-size: 0.9rem;
+                       background: #e0e0e0; color: #333; }
+        .btn-primary { background: #0066cc; color: #fff; }
+        .btn-primary:hover { background: #0052a3; }
+        .btn-warning { background: #e68a00; color: #fff; }
+        .btn-warning:hover { background: #cc7a00; }
+        .btn-danger  { background: #cc2200; color: #fff; }
+        .btn-danger:hover  { background: #aa1a00; }
+        .btn-sm      { padding: 3px 8px; font-size: 0.8rem; }
+        .auth-box    { max-width: 420px; margin: 40px auto; padding: 28px;
+                       border: 1px solid #ddd; border-radius: 6px; background: #fafafa; }
+    </style>
+</head>
+<body>
+```
+
+### `Views/layouts/menu.php`
+
+```php
+<?php declare(strict_types=1); ?>
+<?php $authUser = $_SESSION['auth'] ?? null; ?>
+<nav>
+    <a href="?route=home">Inicio</a>
+    <?php if ($authUser !== null): ?>
+        <a href="?route=users.create">Registrar usuario</a>
+        <a href="?route=users.index">Listar usuarios</a>
+        <span style="margin: 0 10px; color:#555;">|</span>
+        <span style="color:#333;">👤 <?= htmlspecialchars($authUser['name'], ENT_QUOTES, 'UTF-8') ?></span>
+        &nbsp;
+        <a href="?route=auth.logout">Cerrar sesión</a>
+    <?php else: ?>
+        <a href="?route=auth.login">Iniciar sesión</a>
+        <a href="?route=auth.forgot">Recuperar contraseña</a>
+    <?php endif; ?>
+</nav>
+<hr>
+```
+
+### `Views/layouts/footer.php`
+
+```php
+<?php declare(strict_types=1); ?>
+</body>
+</html>
+```
+
+### `Views/home.php`
+
+```php
+<?php require __DIR__ . '/layouts/header.php'; ?>
+<?php require __DIR__ . '/layouts/menu.php'; ?>
+
+<h1>Menú principal</h1>
+<p>Desde aquí podrás acceder a las operaciones del sistema.</p>
+
+<?php if (!empty($message)): ?>
+    <div class="alert-error"><?= htmlspecialchars($message, ENT_QUOTES, 'UTF-8') ?></div>
+<?php endif; ?>
+<?php if (!empty($success)): ?>
+    <div class="alert-success"><?= htmlspecialchars($success, ENT_QUOTES, 'UTF-8') ?></div>
+<?php endif; ?>
+
+<ul>
+    <li><strong>C:</strong> Registrar usuario</li>
+    <li><strong>R:</strong> Consultar usuario</li>
+    <li><strong>U:</strong> Actualizar usuario</li>
+    <li><strong>D:</strong> Eliminar usuario</li>
+    <li><strong>L:</strong> Listar usuarios</li>
+</ul>
+
+<?php require __DIR__ . '/layouts/footer.php'; ?>
+```
+
+### `Views/users/create.php`
+
+```php
+<?php require __DIR__ . '/../layouts/header.php'; ?>
+<?php require __DIR__ . '/../layouts/menu.php'; ?>
+
+<h1>Registrar usuario</h1>
+
+<?php if (!empty($message)): ?>
+    <div class="alert-error"><?= htmlspecialchars($message, ENT_QUOTES, 'UTF-8') ?></div>
+<?php endif; ?>
+<?php if (!empty($success)): ?>
+    <div class="alert-success"><?= htmlspecialchars($success, ENT_QUOTES, 'UTF-8') ?></div>
+<?php endif; ?>
+
+<form method="POST" action="?route=users.store">
+
+    <div class="form-group">
+        <label for="name">Nombre</label><br>
+        <input type="text" id="name" name="name"
+               value="<?= htmlspecialchars($old['name'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
+        <?php if (!empty($errors['name'])): ?>
+            <div class="field-error"><?= htmlspecialchars($errors['name'], ENT_QUOTES, 'UTF-8') ?></div>
+        <?php endif; ?>
+    </div>
+
+    <div class="form-group">
+        <label for="email">Correo</label><br>
+        <input type="email" id="email" name="email"
+               value="<?= htmlspecialchars($old['email'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
+        <?php if (!empty($errors['email'])): ?>
+            <div class="field-error"><?= htmlspecialchars($errors['email'], ENT_QUOTES, 'UTF-8') ?></div>
+        <?php endif; ?>
+    </div>
+
+    <div class="form-group">
+        <label for="password">Contraseña</label><br>
+        <input type="password" id="password" name="password" autocomplete="new-password">
+        <?php if (!empty($errors['password'])): ?>
+            <div class="field-error"><?= htmlspecialchars($errors['password'], ENT_QUOTES, 'UTF-8') ?></div>
+        <?php endif; ?>
+    </div>
+
+    <div class="form-group">
+        <label for="role">Rol</label><br>
+        <select id="role" name="role">
+            <?php foreach ($roleOptions as $opt): ?>
+                <option value="<?= htmlspecialchars($opt, ENT_QUOTES, 'UTF-8') ?>"
+                    <?= (($old['role'] ?? '') === $opt) ? 'selected' : '' ?>>
+                    <?= htmlspecialchars($opt, ENT_QUOTES, 'UTF-8') ?>
+                </option>
+            <?php endforeach; ?>
+        </select>
+        <?php if (!empty($errors['role'])): ?>
+            <div class="field-error"><?= htmlspecialchars($errors['role'], ENT_QUOTES, 'UTF-8') ?></div>
+        <?php endif; ?>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Registrar usuario</button>
+</form>
+
+<?php require __DIR__ . '/../layouts/footer.php'; ?>
+```
+
+### `Views/users/list.php`
+
+```php
+<?php require __DIR__ . '/../layouts/header.php'; ?>
+<?php require __DIR__ . '/../layouts/menu.php'; ?>
+
+<h1>Lista de usuarios</h1>
+
+<?php if (!empty($message)): ?>
+    <div class="alert-error"><?= htmlspecialchars($message, ENT_QUOTES, 'UTF-8') ?></div>
+<?php endif; ?>
+<?php if (!empty($success)): ?>
+    <div class="alert-success"><?= htmlspecialchars($success, ENT_QUOTES, 'UTF-8') ?></div>
+<?php endif; ?>
+
+<?php if (empty($users)): ?>
+    <p>No hay usuarios registrados todavía.</p>
+<?php else: ?>
+    <table>
+        <thead>
+            <tr>
+                <th>Nombre</th><th>Correo</th><th>Rol</th><th>Estado</th><th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php foreach ($users as $user): ?>
+                <tr>
+                    <td><?= htmlspecialchars($user->getName(), ENT_QUOTES, 'UTF-8') ?></td>
+                    <td><?= htmlspecialchars($user->getEmail(), ENT_QUOTES, 'UTF-8') ?></td>
+                    <td><?= htmlspecialchars($user->getRole(), ENT_QUOTES, 'UTF-8') ?></td>
+                    <td><?= htmlspecialchars($user->getStatus(), ENT_QUOTES, 'UTF-8') ?></td>
+                    <td>
+                        <a class="btn btn-sm"
+                           href="?route=users.show&id=<?= urlencode($user->getId()) ?>">Ver</a>
+                        <a class="btn btn-sm btn-warning"
+                           href="?route=users.edit&id=<?= urlencode($user->getId()) ?>">Editar</a>
+                        <form method="POST" action="?route=users.delete" style="display:inline"
+                              onsubmit="return confirm('¿Eliminar este usuario?')">
+                            <input type="hidden" name="id"
+                                   value="<?= htmlspecialchars($user->getId(), ENT_QUOTES, 'UTF-8') ?>">
+                            <button type="submit" class="btn btn-sm btn-danger">Eliminar</button>
+                        </form>
+                    </td>
+                </tr>
+            <?php endforeach; ?>
+        </tbody>
+    </table>
+<?php endif; ?>
+
+<?php require __DIR__ . '/../layouts/footer.php'; ?>
+```
+
+### `Views/users/show.php`
+
+```php
+<?php require __DIR__ . '/../layouts/header.php'; ?>
+<?php require __DIR__ . '/../layouts/menu.php'; ?>
+
+<h1>Detalle de usuario</h1>
+
+<?php if (!empty($message)): ?>
+    <div class="alert-error"><?= htmlspecialchars($message, ENT_QUOTES, 'UTF-8') ?></div>
+<?php endif; ?>
+
+<table class="detail-table">
+    <tr><th>ID</th>     <td><?= htmlspecialchars($user->getId(),     ENT_QUOTES, 'UTF-8') ?></td></tr>
+    <tr><th>Nombre</th> <td><?= htmlspecialchars($user->getName(),   ENT_QUOTES, 'UTF-8') ?></td></tr>
+    <tr><th>Correo</th> <td><?= htmlspecialchars($user->getEmail(),  ENT_QUOTES, 'UTF-8') ?></td></tr>
+    <tr><th>Rol</th>    <td><?= htmlspecialchars($user->getRole(),   ENT_QUOTES, 'UTF-8') ?></td></tr>
+    <tr><th>Estado</th> <td><?= htmlspecialchars($user->getStatus(), ENT_QUOTES, 'UTF-8') ?></td></tr>
+</table>
+
+<p style="margin-top: 16px;">
+    <a class="btn btn-warning"
+       href="?route=users.edit&amp;id=<?= urlencode($user->getId()) ?>">Editar</a>
+    &nbsp;
+    <a class="btn" href="?route=users.index">Volver al listado</a>
+</p>
+
+<?php require __DIR__ . '/../layouts/footer.php'; ?>
+```
+
+### `Views/users/edit.php`
+
+```php
+<?php require __DIR__ . '/../layouts/header.php'; ?>
+<?php require __DIR__ . '/../layouts/menu.php'; ?>
+
+<h1>Editar usuario</h1>
+
+<?php if (!empty($message)): ?>
+    <div class="alert-error"><?= htmlspecialchars($message, ENT_QUOTES, 'UTF-8') ?></div>
+<?php endif; ?>
+
+<form method="POST" action="?route=users.update">
+    <input type="hidden" name="id"
+           value="<?= htmlspecialchars($old['id'] ?? $user->getId(), ENT_QUOTES, 'UTF-8') ?>">
+
+    <div class="form-group">
+        <label for="name">Nombre</label><br>
+        <input type="text" id="name" name="name"
+               value="<?= htmlspecialchars($old['name'] ?? $user->getName(), ENT_QUOTES, 'UTF-8') ?>">
+        <?php if (!empty($errors['name'])): ?>
+            <div class="field-error"><?= htmlspecialchars($errors['name'], ENT_QUOTES, 'UTF-8') ?></div>
+        <?php endif; ?>
+    </div>
+
+    <div class="form-group">
+        <label for="email">Correo</label><br>
+        <input type="email" id="email" name="email"
+               value="<?= htmlspecialchars($old['email'] ?? $user->getEmail(), ENT_QUOTES, 'UTF-8') ?>">
+        <?php if (!empty($errors['email'])): ?>
+            <div class="field-error"><?= htmlspecialchars($errors['email'], ENT_QUOTES, 'UTF-8') ?></div>
+        <?php endif; ?>
+    </div>
+
+    <div class="form-group">
+        <label for="password">
+            Contraseña <small>(déjala en blanco para no cambiarla)</small>
+        </label><br>
+        <input type="password" id="password" name="password"
+               value="" autocomplete="new-password">
+        <?php if (!empty($errors['password'])): ?>
+            <div class="field-error"><?= htmlspecialchars($errors['password'], ENT_QUOTES, 'UTF-8') ?></div>
+        <?php endif; ?>
+    </div>
+
+    <div class="form-group">
+        <label for="role">Rol</label><br>
+        <select id="role" name="role">
+            <?php foreach ($roleOptions as $opt): ?>
+                <option value="<?= htmlspecialchars($opt, ENT_QUOTES, 'UTF-8') ?>"
+                    <?= (($old['role'] ?? $user->getRole()) === $opt) ? 'selected' : '' ?>>
+                    <?= htmlspecialchars($opt, ENT_QUOTES, 'UTF-8') ?>
+                </option>
+            <?php endforeach; ?>
+        </select>
+        <?php if (!empty($errors['role'])): ?>
+            <div class="field-error"><?= htmlspecialchars($errors['role'], ENT_QUOTES, 'UTF-8') ?></div>
+        <?php endif; ?>
+    </div>
+
+    <div class="form-group">
+        <label for="status">Estado</label><br>
+        <select id="status" name="status">
+            <?php foreach ($statusOptions as $opt): ?>
+                <option value="<?= htmlspecialchars($opt, ENT_QUOTES, 'UTF-8') ?>"
+                    <?= (($old['status'] ?? $user->getStatus()) === $opt) ? 'selected' : '' ?>>
+                    <?= htmlspecialchars($opt, ENT_QUOTES, 'UTF-8') ?>
+                </option>
+            <?php endforeach; ?>
+        </select>
+        <?php if (!empty($errors['status'])): ?>
+            <div class="field-error"><?= htmlspecialchars($errors['status'], ENT_QUOTES, 'UTF-8') ?></div>
+        <?php endif; ?>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Guardar cambios</button>
+    &nbsp;
+    <a class="btn" href="?route=users.index">Cancelar</a>
+</form>
+
+<?php require __DIR__ . '/../layouts/footer.php'; ?>
+```
+
+### `Views/auth/login.php`
+
+```php
+<?php require __DIR__ . '/../layouts/header.php'; ?>
+
+<div class="auth-box">
+    <h1>Iniciar sesión</h1>
+
+    <?php if (!empty($message)): ?>
+        <div class="alert-error"><?= htmlspecialchars($message, ENT_QUOTES, 'UTF-8') ?></div>
+    <?php endif; ?>
+
+    <form method="POST" action="?route=auth.authenticate">
+
+        <div class="form-group">
+            <label for="email">Correo electrónico</label><br>
+            <input type="email" id="email" name="email" autofocus
+                   value="<?= htmlspecialchars($old['email'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
+            <?php if (!empty($errors['email'])): ?>
+                <div class="field-error"><?= htmlspecialchars($errors['email'], ENT_QUOTES, 'UTF-8') ?></div>
+            <?php endif; ?>
+        </div>
+
+        <div class="form-group">
+            <label for="password">Contraseña</label><br>
+            <input type="password" id="password" name="password"
+                   autocomplete="current-password">
+            <?php if (!empty($errors['password'])): ?>
+                <div class="field-error"><?= htmlspecialchars($errors['password'], ENT_QUOTES, 'UTF-8') ?></div>
+            <?php endif; ?>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Entrar</button>
+    </form>
+
+    <p style="margin-top: 16px;">
+        <a href="?route=auth.forgot">¿Olvidaste tu contraseña?</a>
+    </p>
+</div>
+
+<?php require __DIR__ . '/../layouts/footer.php'; ?>
+```
+
+### `Views/auth/forgot-password.php`
+
+```php
+<?php require __DIR__ . '/../layouts/header.php'; ?>
+
+<div class="auth-box">
+    <h1>Recuperar contraseña</h1>
+
+    <?php if (!empty($message)): ?>
+        <div class="alert-error"><?= htmlspecialchars($message, ENT_QUOTES, 'UTF-8') ?></div>
+    <?php endif; ?>
+    <?php if (!empty($success)): ?>
+        <div class="alert-success"><?= htmlspecialchars($success, ENT_QUOTES, 'UTF-8') ?></div>
+    <?php endif; ?>
+
+    <p>Introduce el correo con el que te registraste y te enviaremos una contraseña temporal.</p>
+
+    <form method="POST" action="?route=auth.forgot.send">
+        <div class="form-group">
+            <label for="email">Correo electrónico</label><br>
+            <input type="email" id="email" name="email" autofocus
+                   value="<?= htmlspecialchars($old['email'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
+            <?php if (!empty($errors['email'])): ?>
+                <div class="field-error"><?= htmlspecialchars($errors['email'], ENT_QUOTES, 'UTF-8') ?></div>
+            <?php endif; ?>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Enviar contraseña temporal</button>
+    </form>
+
+    <p style="margin-top: 16px;">
+        <a href="?route=auth.login">Volver al inicio de sesión</a>
+    </p>
+</div>
+
+<?php require __DIR__ . '/../layouts/footer.php'; ?>
+```
+
+---
+
+## `public/index.php`
+
+```php
+<?php
+
+declare(strict_types=1);
+
+require_once __DIR__ . '/../vendor/autoload.php';
+
+use App\Common\DependencyInjection;
+use App\crud_usuarios\Application\Services\Dto\Commands\LoginCommand;
+use App\crud_usuarios\Domain\Enums\UserRoleEnum;
+use App\crud_usuarios\Domain\Enums\UserStatusEnum;
+use App\crud_usuarios\Domain\ValuesObjects\UserEmail;
+use App\crud_usuarios\Domain\ValuesObjects\UserPassword;
+use App\crud_usuarios\Infrastructure\Entrypoints\Web\Controllers\Config\WebRoutes;
+use App\crud_usuarios\Infrastructure\Entrypoints\Web\Controllers\Dto\CreateUserWebRequest;
+use App\crud_usuarios\Infrastructure\Entrypoints\Web\Controllers\Dto\UpdateUserWebRequest;
+use App\crud_usuarios\Infrastructure\Entrypoints\Web\Controllers\Dto\UserResponse;
+use App\crud_usuarios\Infrastructure\Entrypoints\Web\Presentation\Flash;
+use App\crud_usuarios\Infrastructure\Entrypoints\Web\Presentation\View;
+
+// ── Guardia de seguridad ──────────────────────────────────────────────────────
+(function (): void {
+    $requestPath = rtrim(
+        (string) parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH),
+        '/'
+    );
+    $publicBase = rtrim(dirname((string) ($_SERVER['SCRIPT_NAME'] ?? '/index.php')), '/');
+
+    if ($requestPath !== $publicBase && !str_starts_with($requestPath, $publicBase . '/')) {
+        if (session_status() !== PHP_SESSION_ACTIVE) {
+            session_start();
+        }
+        $dest = isset($_SESSION['auth']['id']) ? 'home' : 'auth.login';
+        header('Location: ' . $publicBase . '/index.php?route=' . $dest);
+        exit;
+    }
+})();
+
+// ── Bootstrap ─────────────────────────────────────────────────────────────────
+Flash::start();
+
+// ── Auth helpers ──────────────────────────────────────────────────────────────
+function isLoggedIn(): bool
+{
+    return isset($_SESSION['auth']['id']);
+}
+
+function requireAuth(): void
+{
+    if (!isLoggedIn()) {
+        Flash::setMessage('Debes iniciar sesión para acceder a esta sección.');
+        View::redirect('auth.login');
+    }
+}
+
+// ── Routing ───────────────────────────────────────────────────────────────────
+$route  = isset($_GET['route']) ? trim((string) $_GET['route']) : 'home';
+$routes = WebRoutes::routes();
+
+if (!isset($routes[$route])) {
+    http_response_code(404);
+    View::render('home', buildHomeViewData('Ruta no encontrada.'));
+    exit;
+}
+
+$definition = $routes[$route];
+$httpMethod = strtoupper((string) $_SERVER['REQUEST_METHOD']);
+
+if ($httpMethod !== $definition['method']) {
+    http_response_code(405);
+    View::render('home', buildHomeViewData('Método HTTP no permitido.'));
+    exit;
+}
+
+$publicActions = ['home', 'login', 'authenticate', 'logout', 'forgot', 'forgot.send', 'create', 'store'];
+
+if (!in_array($definition['action'], $publicActions, true) && !isLoggedIn()) {
+    Flash::setMessage('Debes iniciar sesión para acceder a esta sección.');
+    View::redirect('auth.login');
+}
+
+// ── Dispatch ──────────────────────────────────────────────────────────────────
+try {
+    switch ($definition['action']) {
+
+        case 'home':
+            View::render('home', buildHomeViewData());
+            break;
+
+        case 'create':
+            View::render('users/create', buildCreateUserViewData());
+            break;
+
+        case 'store':
+            $form       = getCreateUserFormData();
+            $form['id'] = generateUuid4();
+            $errors     = validateCreateUserForm($form);
+
+            if (!empty($errors)) {
+                Flash::setOld($form);
+                Flash::setErrors($errors);
+                Flash::setMessage('Corrige los errores del formulario.');
+                View::redirect('users.create');
+            }
+
+            $request = new CreateUserWebRequest(
+                id:       $form['id'],
+                name:     $form['name'],
+                email:    $form['email'],
+                password: $form['password'],
+                role:     $form['role'],
+            );
+
+            DependencyInjection::getUserController()->store($request);
+            Flash::setSuccess('Usuario registrado correctamente.');
+            View::redirect('users.index');
+            break;
+
+        case 'index':
+            $users = DependencyInjection::getUserController()->index();
+            View::render('users/list', buildListUsersViewData($users));
+            break;
+
+        case 'show':
+            $id   = isset($_GET['id']) ? trim((string) $_GET['id']) : '';
+            $user = DependencyInjection::getUserController()->show($id);
+            View::render('users/show', [
+                'pageTitle' => 'Detalle de usuario',
+                'user'      => $user,
+                'message'   => Flash::message(),
+            ]);
+            break;
+
+        case 'edit':
+            $id   = isset($_GET['id']) ? trim((string) $_GET['id']) : '';
+            $user = DependencyInjection::getUserController()->show($id);
+            View::render('users/edit', buildEditUserViewData($user));
+            break;
+
+        case 'update':
+            $form   = getUpdateUserFormData();
+            $errors = validateUpdateUserForm($form);
+
+            if (!empty($errors)) {
+                Flash::setOld($form);
+                Flash::setErrors($errors);
+                Flash::setMessage('Corrige los errores del formulario.');
+                header('Location: ?route=users.edit&id=' . urlencode($form['id']));
+                exit;
+            }
+
+            $request = new UpdateUserWebRequest(
+                id:       $form['id'],
+                name:     $form['name'],
+                email:    $form['email'],
+                password: $form['password'],
+                role:     $form['role'],
+                status:   $form['status'],
+            );
+
+            DependencyInjection::getUserController()->update($request);
+            Flash::setSuccess('Usuario actualizado correctamente.');
+            View::redirect('users.index');
+            break;
+
+        case 'delete':
+            $id = isset($_POST['id']) ? trim((string) $_POST['id']) : '';
+            DependencyInjection::getUserController()->delete($id);
+            Flash::setSuccess('Usuario eliminado correctamente.');
+            View::redirect('users.index');
+            break;
+
+        case 'login':
+            if (isLoggedIn()) {
+                View::redirect('home');
+            }
+            View::render('auth/login', [
+                'pageTitle' => 'Iniciar sesión',
+                'message'   => Flash::message(),
+                'errors'    => Flash::errors(),
+                'old'       => Flash::old(),
+            ]);
+            break;
+
+        case 'authenticate':
+            $email    = trim(strtolower((string) ($_POST['email'] ?? '')));
+            $password = (string) ($_POST['password'] ?? '');
+
+            $authErrors = [];
+            if ($email === '') {
+                $authErrors['email'] = 'El correo es obligatorio.';
+            }
+            if ($password === '') {
+                $authErrors['password'] = 'La contraseña es obligatoria.';
+            }
+
+            if (!empty($authErrors)) {
+                Flash::setErrors($authErrors);
+                Flash::setOld(['email' => $email]);
+                View::redirect('auth.login');
+            }
+
+            $command = new LoginCommand($email, $password);
+            $user    = DependencyInjection::getLoginUseCase()->execute($command);
+
+            $_SESSION['auth'] = [
+                'id'    => $user->id()->value(),
+                'name'  => $user->name()->value(),
+                'email' => $user->email()->value(),
+                'role'  => $user->role(),
+            ];
+
+            Flash::setSuccess('Bienvenido/a, ' . $user->name()->value() . '.');
+            View::redirect('home');
+            break;
+
+        case 'logout':
+            session_destroy();
+            header('Location: ?route=auth.login');
+            exit;
+
+        case 'forgot':
+            View::render('auth/forgot-password', [
+                'pageTitle' => 'Recuperar contraseña',
+                'message'   => Flash::message(),
+                'success'   => Flash::success(),
+                'errors'    => Flash::errors(),
+                'old'       => Flash::old(),
+            ]);
+            break;
+
+        case 'forgot.send':
+            $forgotEmail = trim(strtolower((string) ($_POST['email'] ?? '')));
+
+            if ($forgotEmail === '' || !filter_var($forgotEmail, FILTER_VALIDATE_EMAIL)) {
+                Flash::setErrors(['email' => 'Introduce un correo electrónico válido.']);
+                Flash::setOld(['email' => $forgotEmail]);
+                View::redirect('auth.forgot');
+            }
+
+            $repository = DependencyInjection::getUserRepository();
+            $foundUser  = $repository->getByEmail(new UserEmail($forgotEmail));
+
+            if ($foundUser !== null && $foundUser->status() === UserStatusEnum::ACTIVE) {
+                $tempPassword = bin2hex(random_bytes(5));
+                $newPassword  = UserPassword::fromPlainText($tempPassword);
+                $updatedUser  = $foundUser->changePassword($newPassword);
+                $repository->update($updatedUser);
+                sendPasswordRecoveryEmail(
+                    email:        $foundUser->email()->value(),
+                    name:         $foundUser->name()->value(),
+                    tempPassword: $tempPassword,
+                );
+            }
+
+            Flash::setSuccess(
+                'Si el correo está registrado y la cuenta está activa, ' .
+                'recibirás un mensaje con tu contraseña temporal.'
+            );
+            View::redirect('auth.forgot');
+            break;
+
+        default:
+            throw new \RuntimeException('Acción no soportada.');
+    }
+
+} catch (\Throwable $exception) {
+    $msg = $exception->getMessage();
+    Flash::setMessage($msg);
+
+    switch ($route) {
+        case 'users.store':
+            Flash::setOld(getCreateUserFormData());
+            View::redirect('users.create');
+            break;
+        case 'users.update':
+            $updateId = trim((string) ($_POST['id'] ?? ''));
+            Flash::setOld(getUpdateUserFormData());
+            header('Location: ?route=users.edit&id=' . urlencode($updateId));
+            exit;
+        case 'auth.authenticate':
+            Flash::setOld(['email' => trim(strtolower((string) ($_POST['email'] ?? '')))]);
+            View::redirect('auth.login');
+            break;
+        case 'auth.forgot.send':
+            Flash::setOld(['email' => trim((string) ($_POST['email'] ?? ''))]);
+            View::redirect('auth.forgot');
+            break;
+        case 'users.show':
+        case 'users.edit':
+        case 'users.delete':
+            View::redirect('users.index');
+            break;
+        default:
+            View::render('home', buildHomeViewData($msg));
+            break;
+    }
+}
+
+// ── Helper de email ───────────────────────────────────────────────────────────
+function sendPasswordRecoveryEmail(string $email, string $name, string $tempPassword): void
+{
+    $templateFile = __DIR__ . '/../crud-usuarios/Infrastructure/Entrypoints/Web/Presentation/Views/emails/forgot-password.php';
+
+    ob_start();
+    extract(['email' => $email, 'name' => $name, 'tempPassword' => $tempPassword], EXTR_SKIP);
+    require $templateFile;
+    $htmlBody = (string) ob_get_clean();
+
+    $subject = '=?UTF-8?B?' . base64_encode('Recuperación de contraseña') . '?=';
+    $headers = implode("\r\n", [
+        'MIME-Version: 1.0',
+        'Content-Type: text/html; charset=UTF-8',
+        'From: CRUD Usuarios <no-reply@crud-usuarios.local>',
+        'X-Mailer: PHP/' . PHP_VERSION,
+    ]);
+
+    mail($email, $subject, $htmlBody, $headers);
+}
+
+// ── Constructores de datos para vistas ────────────────────────────────────────
+/** @return array<string, mixed> */
+function buildHomeViewData(string $message = ''): array
+{
+    return [
+        'pageTitle' => 'Menú principal',
+        'message'   => $message,
+        'success'   => Flash::success(),
+    ];
+}
+
+/** @return array<string, mixed> */
+function buildCreateUserViewData(): array
+{
+    return [
+        'pageTitle'   => 'Registrar usuario',
+        'roleOptions' => UserRoleEnum::values(),
+        'message'     => Flash::message(),
+        'success'     => Flash::success(),
+        'errors'      => Flash::errors(),
+        'old'         => Flash::old(),
+    ];
+}
+
+/**
+ * @param  UserResponse[]       $users
+ * @return array<string, mixed>
+ */
+function buildListUsersViewData(array $users): array
+{
+    return [
+        'pageTitle' => 'Lista de usuarios',
+        'users'     => $users,
+        'message'   => Flash::message(),
+        'success'   => Flash::success(),
+    ];
+}
+
+/** @return array<string, mixed> */
+function buildEditUserViewData(UserResponse $user): array
+{
+    return [
+        'pageTitle'     => 'Editar usuario',
+        'user'          => $user,
+        'roleOptions'   => UserRoleEnum::values(),
+        'statusOptions' => UserStatusEnum::values(),
+        'message'       => Flash::message(),
+        'errors'        => Flash::errors(),
+        'old'           => Flash::old(),
+    ];
+}
+
+// ── Lectores de formulario ────────────────────────────────────────────────────
+/** @return array<string, string> */
+function getCreateUserFormData(): array
+{
+    return [
+        'name'     => isset($_POST['name'])     ? trim((string) $_POST['name'])     : '',
+        'email'    => isset($_POST['email'])    ? trim((string) $_POST['email'])    : '',
+        'password' => isset($_POST['password']) ? trim((string) $_POST['password']) : '',
+        'role'     => isset($_POST['role'])     ? trim((string) $_POST['role'])     : '',
+    ];
+}
+
+/** @return array<string, string> */
+function getUpdateUserFormData(): array
+{
+    return [
+        'id'       => isset($_POST['id'])       ? trim((string) $_POST['id'])       : '',
+        'name'     => isset($_POST['name'])     ? trim((string) $_POST['name'])     : '',
+        'email'    => isset($_POST['email'])    ? trim((string) $_POST['email'])    : '',
+        'password' => isset($_POST['password']) ? (string) $_POST['password']       : '',
+        'role'     => isset($_POST['role'])     ? trim((string) $_POST['role'])     : '',
+        'status'   => isset($_POST['status'])   ? trim((string) $_POST['status'])   : '',
+    ];
+}
+
+// ── Validadores ───────────────────────────────────────────────────────────────
+/**
+ * @param  array<string, string> $form
+ * @return array<string, string>
+ */
+function validateCreateUserForm(array $form): array
+{
+    $errors = [];
+
+    if ($form['name'] === '') {
+        $errors['name'] = 'El nombre es obligatorio.';
+    }
+    if ($form['email'] === '') {
+        $errors['email'] = 'El correo es obligatorio.';
+    } elseif (!filter_var($form['email'], FILTER_VALIDATE_EMAIL)) {
+        $errors['email'] = 'El correo no tiene un formato válido.';
+    }
+    if ($form['password'] === '') {
+        $errors['password'] = 'La contraseña es obligatoria.';
+    } elseif (strlen($form['password']) < 8) {
+        $errors['password'] = 'La contraseña debe tener al menos 8 caracteres.';
+    }
+    if ($form['role'] === '') {
+        $errors['role'] = 'El rol es obligatorio.';
+    }
+
+    return $errors;
+}
+
+/**
+ * @param  array<string, string> $form
+ * @return array<string, string>
+ */
+function validateUpdateUserForm(array $form): array
+{
+    $errors = [];
+
+    if ($form['name'] === '') {
+        $errors['name'] = 'El nombre es obligatorio.';
+    }
+    if ($form['email'] === '') {
+        $errors['email'] = 'El correo es obligatorio.';
+    } elseif (!filter_var($form['email'], FILTER_VALIDATE_EMAIL)) {
+        $errors['email'] = 'El correo no tiene un formato válido.';
+    }
+    if ($form['password'] !== '' && strlen($form['password']) < 8) {
+        $errors['password'] = 'La contraseña debe tener al menos 8 caracteres si deseas cambiarla.';
+    }
+    if ($form['role'] === '') {
+        $errors['role'] = 'El rol es obligatorio.';
+    }
+    if ($form['status'] === '') {
+        $errors['status'] = 'El estado es obligatorio.';
+    }
+
+    return $errors;
+}
+
+// ── UUID v4 ───────────────────────────────────────────────────────────────────
+function generateUuid4(): string
+{
+    $data    = random_bytes(16);
+    $data[6] = chr(ord($data[6]) & 0x0f | 0x40);
+    $data[8] = chr(ord($data[8]) & 0x3f | 0x80);
+    return vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($data), 4));
+}
+```
+
+---
+
+## `.htaccess` (raíz del proyecto)
+
+```apache
+Options -Indexes
+RewriteEngine On
+
+# Las peticiones a /public/ pasan directamente
+RewriteRule ^public/ - [L]
+
+# Los archivos estáticos se sirven directamente
+RewriteRule \.(css|js|png|jpg|jpeg|gif|ico|svg|woff|woff2)$ - [L,NC]
+
+# Todo lo demás → public/index.php
+RewriteRule ^ public/index.php [L]
+```
+
+---
+
+## Decisiones de diseño clave
+
+### Sin ClassLoader — solo Composer
+
+La guía original usa un `ClassLoader` manual con `spl_autoload_register`. Como el proyecto ya tiene Composer configurado con PSR-4, el ClassLoader es innecesario y redundante. El único `require_once` que existe en todo el proyecto es `vendor/autoload.php` en `index.php`.
+
+### `Common` y `public` en la raíz
+
+`Common/DependencyInjection.php` y `public/index.php` son **transversales a todos los módulos**. Ubicarlos dentro de `crud-usuarios/` los atarían incorrectamente a ese módulo. Al estar en la raíz, cuando se añada el módulo `calificaciones/`, la `DependencyInjection` simplemente agrega sus fábricas sin mover nada.
+
+### `namespace App\Common`
+
+Al estar `Common/` en la raíz y el PSR-4 mapear `App\` a `""`, el namespace correcto es `App\Common` — no `App\crud_usuarios\Common`.
+
+### `View::redirect()` retorna `never`
+
+PHP 8.1 introdujo el tipo de retorno `never` para métodos que siempre terminan la ejecución (`exit`, `throw`). Usarlo en `redirect()` permite que los analizadores estáticos (PHPStan, Psalm) detecten código inalcanzable después de un redirect.
+
+### Constructor promotion + `readonly` en todos los DTOs
+
+Los DTOs y el controlador usan `private readonly` en constructor promotion. Esto garantiza inmutabilidad sin boilerplate — una vez creado el objeto, ningún campo puede cambiar.
+
+### `getUserRepository()` es `public`
+
+El método `getUserRepository()` en `DependencyInjection` es `public` porque `index.php` lo necesita directamente en el caso `forgot.send` para llamar a `update()` con la nueva contraseña temporal — una operación que no pasa por el `UserController`.
