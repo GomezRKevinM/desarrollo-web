@@ -8,7 +8,7 @@ use App\Domain\Exceptions\InvalidCalificationFechaException;
 
 final class CalificationFecha
 {
-    private \DateTimeImmutable $value;
+    private \DateTime $value;
 
     public function __construct(string $value)
     {
@@ -17,8 +17,8 @@ final class CalificationFecha
             throw InvalidCalificationFechaException::becauseIsEmpty();
         }
 
-        $parsed = \DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $normalized)
-            ?: \DateTimeImmutable::createFromFormat('Y-m-d', $normalized);
+        $parsed = \DateTime::createFromFormat('Y-m-d H:i:s', $normalized)
+            ?: \DateTime::createFromFormat('Y-m-d', $normalized);
 
         if ($parsed === false) {
             throw InvalidCalificationFechaException::becauseFormatIsInvalid($normalized);
@@ -33,7 +33,7 @@ final class CalificationFecha
         return $instance;
     }
 
-    public function value(): \DateTimeImmutable { return $this->value; }
+    public function value(): \DateTime { return $this->value; }
 
     public function toDbFormat(): string
     {
