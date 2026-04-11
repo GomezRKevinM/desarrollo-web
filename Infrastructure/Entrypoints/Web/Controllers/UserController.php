@@ -23,7 +23,7 @@ final class UserController
         private readonly GetByUserIdUseCase $getUserByIdUseCase,
         private readonly GetAllUsersUseCase $getAllUsersUseCase,
         private readonly DeleteUserUseCase  $deleteUserUseCase,
-        private readonly UserWebMapper      $mapper,
+        private readonly UserWebMapper      $mapper
     ) {}
 
     /** @return UserResponse[] */
