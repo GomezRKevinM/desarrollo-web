@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Exceptions;
 
-final class InvalidCalificacionFechaException extends \InvalidArgumentException
+final class InvalidCalificationFechaException extends \InvalidArgumentException
 {
     public static function becauseIsEmpty(): self
     {

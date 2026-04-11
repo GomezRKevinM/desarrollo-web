@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Exceptions;
 
-final class InvalidCalificacionPorcentajeException extends \InvalidArgumentException
+final class InvalidCalificationPorcentajeException extends \InvalidArgumentException
 {
 
     public static function becauseIsEmpty(): self

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Exceptions;
 
-final class InvalidCalificacionNotaException extends \InvalidArgumentException
+final class InvalidCalificationNotaException extends \InvalidArgumentException
 {
     public static function becauseIsEmpty(): self
     {

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Exceptions;
 
-final class CalificacionAlreadyExistsException extends \DomainException
+final class CalificationAlreadyExistsException extends \DomainException
 {
     public static function becauseIdAlreadyExists(string $id): self
     {
