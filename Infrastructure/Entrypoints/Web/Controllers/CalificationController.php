@@ -23,7 +23,6 @@ final class CalificationController
             private DeleteCalificationUseCase $deleteCalificationUseCase,
             private GetByCalificationIdUseCase $getByCalificationIdUseCase,
             private GetAllCalificationsUseCase $getAllCalificationsUseCase,
-            private DeleteCalificationUseCase $deleteUserUseCase,
             private CalificationWebMapper $mapper
         ) {}
 

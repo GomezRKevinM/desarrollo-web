@@ -4,17 +4,23 @@ declare(strict_types=1);
 
 namespace App\Common;
 
+use App\Application\Ports\In\CreateCalificationUseCase;
 use App\Application\Ports\In\CreateStudentUseCase;
 use App\Application\Ports\In\CreateUserUseCase;
+use App\Application\Ports\In\DeleteCalificationUseCase;
 use App\Application\Ports\In\DeleteUserUseCase;
+use App\Application\Ports\In\GetAllCalificationsUseCase;
 use App\Application\Ports\In\GetAllStudentsUseCase;
 use App\Application\Ports\In\GetAllUsersUseCase;
+use App\Application\Ports\In\GetByCalificationIdUseCase;
 use App\Application\Ports\In\GetByUserIdUseCase;
 use App\Application\Ports\In\LoginUseCase;
+use App\Application\Ports\In\UpdateCalificationUseCase;
 use App\Application\Ports\In\UpdateStudentUseCase;
 use App\Application\Ports\In\DeleteStudentUseCase;
 use App\Application\Ports\In\GetByStudentIdUseCase;
 use App\Application\Ports\In\UpdateUserUseCase;
+use App\Application\Services\CreateCalificationService;
 use App\Application\Services\CreateStudentService;
 use App\Application\Services\CreateUSerService;
 use App\Application\Services\DeleteUserService;
@@ -23,14 +29,22 @@ use App\Application\Services\GetAllUsersService;
 use App\Application\Services\GetAllStudentsService;
 use App\Application\Services\GetUserByIdService;
 use App\Application\Services\GetStudentByIdService;
+use App\Application\Services\GetCalificationByIdService;
+use App\Application\Services\DeleteCalificationService;
+use App\Application\Services\GetAllCalificationsService;
 use App\Application\Services\LoginService;
 use App\Application\Services\UpdateUserService;
 use App\Application\Services\UpdateStudentService;
+use App\Application\Services\UpdateCalificationService;
 use App\Infrastructure\Adapters\Persistence\MySQL\Config\Connection;
+use App\Infrastructure\Adapters\Persistence\MySQL\Mapper\CalificationPersistenceMapper;
 use App\Infrastructure\Adapters\Persistence\MySQL\Mapper\StudentPersistenceMapper;
 use App\Infrastructure\Adapters\Persistence\MySQL\Mapper\UserPersistenceMapper;
+use App\Infrastructure\Adapters\Persistence\MySQL\Repository\CalificationRepositoryMysql;
 use App\Infrastructure\Adapters\Persistence\MySQL\Repository\StudentRepositoryMySQL;
 use App\Infrastructure\Adapters\Persistence\MySQL\Repository\UserRepositoryMySQL;
+use App\Infrastructure\Entrypoints\Web\Controllers\CalificationController;
+use App\Infrastructure\Entrypoints\Web\Controllers\Mapper\CalificationWebMapper;
 use App\Infrastructure\Entrypoints\Web\Controllers\StudentController;
 use App\Infrastructure\Entrypoints\Web\Controllers\UserController;
 use App\Infrastructure\Entrypoints\Web\Controllers\Mapper\UserWebMapper;
@@ -170,13 +184,13 @@ final class DependencyInjection
     public static function getCreateStudentUseCase(): CreateStudentUseCase
     {
         $repo = self::getStudentRepository();
-        return new CreateStudentService($repo, $repo);
+        return new CreateStudentService($repo);
     }
 
     public static function getUpdateStudentUseCase(): UpdateStudentUseCase
     {
         $repo = self::getStudentRepository();
-        return new UpdateStudentService($repo, $repo, $repo);
+        return new UpdateStudentService($repo, $repo);
     }
 
     public static function getGetStudentByIdUseCase(): GetByStudentIdUseCase
@@ -195,6 +209,12 @@ final class DependencyInjection
         return new DeleteStudentService($repo, $repo);
     }
 
+    public static function getDeleteCalificationUseCase(): DeleteCalificationUseCase
+    {
+        $repo = self::getCalificationRepository();
+        return new DeleteCalificationService($repo, $repo);
+    }
+
     public static function getStudentController(): StudentController
     {
         return new StudentController(
@@ -207,4 +227,45 @@ final class DependencyInjection
         );
     }
 
+    public static function getCalificationRepository(): CalificationRepositoryMySQL
+    {
+        return new CalificationRepositoryMySQL(
+            pdo:    self::getConnection()->createPDO(),
+            mapper: new CalificationPersistenceMapper(),
+        );
+    }
+
+    public static function getCreateCalificationUseCase(): CreateCalificationUseCase
+    {
+        $repo = self::getCalificationRepository();
+        return new CreateCalificationService($repo);
+    }
+
+    public static function getUpdateCalificationUseCase(): UpdateCalificationUseCase
+    {
+        $repo = self::getCalificationRepository();
+        return new UpdateCalificationService($repo, $repo);
+    }
+
+    public static function getCalificationByIdUseCase(): GetByCalificationIdUseCase
+    {
+        return new GetCalificationByIdService(self::getCalificationRepository());
+    }
+
+    public static function getAllCalificationsUseCase(): GetAllCalificationsUseCase
+    {
+        return new GetAllCalificationsService(self::getCalificationRepository());
+    }
+
+    public static function getCalificationController(): CalificationController
+    {
+        return new CalificationController(
+            createCalificationUseCase:  self::getCreateCalificationUseCase(),
+            updateCalificationUseCase:  self::getUpdateCalificationUseCase(),
+            deleteCalificationUseCase:  self::getDeleteCalificationUseCase(),
+            getByCalificationIdUseCase: self::getCalificationByIdUseCase(),
+            getAllCalificationsUseCase:  self::getAllCalificationsUseCase(),
+            mapper:                     new CalificationWebMapper()
+        );
+    }
 }
