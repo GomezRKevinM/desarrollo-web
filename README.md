@@ -6,8 +6,8 @@
 
 # Clases Adicionales
 
-[Estudiante](./students.md)
-[Calificaciones](./califications.md)
+[Estudiante](./student.md)
+[Calificaciones](./calification.md)
 
 ---
 
