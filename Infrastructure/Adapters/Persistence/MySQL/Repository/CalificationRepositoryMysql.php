@@ -128,7 +128,7 @@ final class CalificationRepositoryMysql implements
         return $updatedCalification;
     }
 
-    public function getById(CalificationId $calificationId): ?CalificationModel
+    public function getById(CalificationId $id): ?CalificationModel
     {
         $sql = <<<'SQL'
             SELECT
@@ -152,7 +152,7 @@ final class CalificationRepositoryMysql implements
 
         $statement = $this->pdo->prepare($sql);
         $statement->execute(array(
-            ':id' => $calificationId->value(),
+            ':id' => $id->value(),
         ));
         $row = $statement->fetch();
         if ($row === false) {
@@ -190,7 +190,7 @@ final class CalificationRepositoryMysql implements
         return $this->mapper->fromRowsToModels($rows);
     }
 
-    public function delete(CalificationId $calificationId): void
+    public function delete(CalificationId $id): void
     {
         $sql = <<<'SQL'
             DELETE FROM calificacion WHERE id = :id
@@ -198,7 +198,7 @@ final class CalificationRepositoryMysql implements
 
         $statement = $this->pdo->prepare($sql);
         $statement->execute(array(
-            ':id' => $calificationId->value(),
+            ':id' => $id->value(),
         ));
     }
 
