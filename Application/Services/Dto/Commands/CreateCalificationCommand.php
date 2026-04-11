@@ -14,9 +14,9 @@ final class CreateCalificationCommand
     private string $universidad;
     private string $periodo;
     private string $actividadEvaluada;
-    private string $porcentaje;
+    private float $porcentaje;
     private string $studentId;
-    private string $nota;
+    private float $nota;
 
     public function __construct(
         string $id,
@@ -27,9 +27,9 @@ final class CreateCalificationCommand
         string $universidad,
         string $periodo,
         string $actividadEvaluada,
-        string $porcentaje,
+        float $porcentaje,
         string $studentId,
-        string $nota
+        float $nota
     )
     {
         $this->id = trim($id);
@@ -40,9 +40,9 @@ final class CreateCalificationCommand
         $this->universidad = trim($universidad);
         $this->periodo = trim($periodo);
         $this->actividadEvaluada = trim($actividadEvaluada);
-        $this->porcentaje = trim($porcentaje);
+        $this->porcentaje = $porcentaje;
         $this->studentId = trim($studentId);
-        $this->nota = trim($nota);
+        $this->nota = $nota;
     }
 
     public function getId(): string { return $this->id; }
@@ -53,8 +53,8 @@ final class CreateCalificationCommand
     public function getUniversidad(): string { return $this->universidad; }
     public function getPeriodo(): string { return $this->periodo; }
     public function getActividadEvaluada(): string { return $this->actividadEvaluada; }
-    public function getPorcentaje(): string { return $this->porcentaje; }
+    public function getPorcentaje(): float { return $this->porcentaje; }
     public function getStudentId(): string { return $this->studentId; }
-    public function getNota(): string { return $this->nota; }
+    public function getNota(): float { return $this->nota; }
 }
 
