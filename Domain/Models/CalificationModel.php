@@ -14,7 +14,7 @@ use App\Domain\ValuesObjects\CalificationNota;
 use App\Domain\ValuesObjects\CalificationPeriodo;
 use App\Domain\ValuesObjects\CalificationPorcentaje;
 use App\Domain\ValuesObjects\CalificationUniversidad;
-use App\Domain\ValuesObjects\UserId;
+use App\Domain\ValuesObjects\StudentId;
 
 final class CalificationModel
 {
@@ -28,7 +28,7 @@ final class CalificationModel
         private CalificationPeriodo         $periodo,
         private CalificationActividadEvaluada $actividadEvaluada,
         private CalificationPorcentaje      $porcentaje,
-        private UserId                      $studentId,
+        private StudentId                      $studentId,
         private CalificationNota            $nota,
     ) {}
 
@@ -41,7 +41,7 @@ final class CalificationModel
     public function periodo(): CalificationPeriodo             { return $this->periodo; }
     public function actividadEvaluada(): CalificationActividadEvaluada { return $this->actividadEvaluada; }
     public function porcentaje(): CalificationPorcentaje       { return $this->porcentaje; }
-    public function studentId(): UserId                        { return $this->studentId; }
+    public function studentId(): StudentId                        { return $this->studentId; }
     public function nota(): CalificationNota                   { return $this->nota; }
 
     public function toArray(): array
