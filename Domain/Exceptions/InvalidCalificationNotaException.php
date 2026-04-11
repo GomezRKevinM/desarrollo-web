@@ -20,4 +20,12 @@ final class InvalidCalificationNotaException extends \InvalidArgumentException
     {
         return new self('El valor de nota no puede ser menor a ' . $min);
     }
+
+    public static function becauseValueIsOutOfRange(float $min, float $max): self
+    {
+        return new self(
+            'La nota debe estar entre ' . $min . ' y ' . $max . '.'
+        );
+    }
+
 }
