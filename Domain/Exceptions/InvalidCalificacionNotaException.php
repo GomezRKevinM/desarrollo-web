@@ -1,0 +1,23 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Domain\Exceptions;
+
+final class InvalidCalificacionNotaException extends \InvalidArgumentException
+{
+    public static function becauseIsEmpty(): self
+    {
+        return new self('el valor del periodo no puede estar vacio');
+    }
+
+    public static function becauseLengthIsTooLong(int $max): self
+    {
+        return new self('El valor de nota no puede ser mayor a ' . $max);
+    }
+
+    public static function becauseLengthIsTooShort(int $min): self
+    {
+        return new self('El valor de nota no puede ser menor a ' . $min);
+    }
+}
