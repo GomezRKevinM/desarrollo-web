@@ -76,6 +76,12 @@ table.detail-table th {
     color: #333;
 }
 
+.link{
+    text-decoration: none;
+    color: #0066cc;
+    font-weight: bold;
+}
+
 .btn-primary {
     background: #0066cc;
     color: #fff;

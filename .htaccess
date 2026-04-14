@@ -7,3 +7,4 @@ RewriteRule ^public/ - [L]
 RewriteRule \.(css|js|png|jpg|...)$ - [L,NC]
 # TODO lo demás se reescribe internamente hacia public/index.php
 RewriteRule ^ public/index.php [L]
+

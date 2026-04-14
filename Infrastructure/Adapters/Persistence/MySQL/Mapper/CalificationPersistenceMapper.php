@@ -67,7 +67,7 @@ final class CalificationPersistenceMapper
             (string) $row['periodo'],
             (string) $row['actividadEvaluada'],
             (float) $row['porcentaje'],
-            (string) $row['studentId'],
+            (string) $row['student_id'],
             (float) $row['nota'],
             isset($row['created_at']) ? (string) $row['created_at'] : null,
             isset($row['updated_at']) ? (string) $row['updated_at'] : null

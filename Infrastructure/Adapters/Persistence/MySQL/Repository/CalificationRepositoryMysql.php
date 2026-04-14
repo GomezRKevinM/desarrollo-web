@@ -46,7 +46,7 @@ final class CalificationRepositoryMysql implements
                 periodo,
                 actividadEvaluada,
                 porcentaje,
-                studentId,
+                student_id,
                 nota,
                 created_at,
                 updated_at
@@ -83,7 +83,7 @@ final class CalificationRepositoryMysql implements
         ));
         $savedCalification = $this->getById(new CalificationId($dto->id()));
         if ($savedCalification === null) {
-            throw new RuntimeException('The Calification could not be recovered after save.');
+            throw new RuntimeException('The Califications could not be recovered after save.');
         }
         return $savedCalification;
     }
@@ -101,7 +101,7 @@ final class CalificationRepositoryMysql implements
             periodo = :periodo,
             actividadEvaluada = :actividadEvaluada,
             porcentaje = :porcentaje,
-            studentId = :studentId,
+            student_id = :studentId,
             nota = :nota,
             updated_at = NOW()
             WHERE id = :id
@@ -123,7 +123,7 @@ final class CalificationRepositoryMysql implements
         ));
         $updatedCalification = $this->getById(new CalificationId($dto->id()));
         if ($updatedCalification === null) {
-            throw new RuntimeException('The Calification could not be recovered after update.');
+            throw new RuntimeException('The Califications could not be recovered after update.');
         }
         return $updatedCalification;
     }
@@ -141,7 +141,7 @@ final class CalificationRepositoryMysql implements
             periodo,
             actividadEvaluada,
             porcentaje,
-            studentId,
+            student_id,
             nota,
             created_at,
             updated_at
@@ -177,7 +177,7 @@ final class CalificationRepositoryMysql implements
             periodo,
             actividadEvaluada,
             porcentaje,
-            studentId,
+            student_id,
             nota,
             created_at,
             updated_at

@@ -19,7 +19,7 @@ use App\Domain\ValuesObjects\CalificationPeriodo;
 use App\Domain\ValuesObjects\CalificationActividadEvaluada;
 use App\Domain\ValuesObjects\CalificationPorcentaje;
 use App\Domain\ValuesObjects\CalificationNota;
-use App\Domain\ValuesObjects\UserId;
+use App\Domain\ValuesObjects\StudentId;
 
 final class CalificationApplicationMapper
 {
@@ -39,7 +39,7 @@ final class CalificationApplicationMapper
             new CalificationPeriodo($command->getPeriodo()),
             new CalificationActividadEvaluada($command->getActividadEvaluada()),
             new CalificationPorcentaje($command->getPorcentaje()),
-            new UserId($command->getStudentId()),
+            new StudentId($command->getStudentId()),
             new CalificationNota($command->getNota())
         );
     }
@@ -59,7 +59,7 @@ final class CalificationApplicationMapper
             new CalificationPeriodo($command->getPeriodo()),
             new CalificationActividadEvaluada($command->getActividadEvaluada()),
             new CalificationPorcentaje($command->getPorcentaje()),
-            new UserId($command->getStudentId()),
+            new StudentId($command->getStudentId()),
             new CalificationNota($command->getNota())
         );
     }

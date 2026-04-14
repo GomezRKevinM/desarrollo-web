@@ -84,18 +84,18 @@
         </div>
 
         <div class="form-group">
-            <label for="studentId">Estudiante</label><br>
-            <select id="studentId" name="studentId">
+            <label for="student_id">Estudiante</label><br>
+            <select id="student_id" name="student_id">
                 <option value="">Seleccione un estudiante...</option>
                 <?php foreach ($students as $student): ?>
                     <option value="<?= htmlspecialchars($student->getId(), ENT_QUOTES, 'UTF-8') ?>"
-                        <?= (($old['studentId'] ?? $calification->getStudentId()) === $student->getId()) ? 'selected' : '' ?>>
+                        <?= (($old['student_id'] ?? $calification->getStudentId()) === $student->getId()) ? 'selected' : '' ?>>
                         <?= htmlspecialchars($student->getName() . ' ' . $student->getLastName(), ENT_QUOTES, 'UTF-8') ?>
                     </option>
                 <?php endforeach; ?>
             </select>
-            <?php if (!empty($errors['studentId'])): ?>
-                <div class="field-error"><?= htmlspecialchars($errors['studentId'], ENT_QUOTES, 'UTF-8') ?></div>
+            <?php if (!empty($errors['student_id'])): ?>
+                <div class="field-error"><?= htmlspecialchars($errors['student_id'], ENT_QUOTES, 'UTF-8') ?></div>
             <?php endif; ?>
         </div>
 
