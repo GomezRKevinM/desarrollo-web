@@ -489,6 +489,7 @@ app/Infrastructure/
 **Esquema de base de datos requerido**
 
 ```sql
+
 CREATE DATABASE IF NOT EXISTS crud_usuarios;
 USE crud_usuarios;
 

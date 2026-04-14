@@ -20,4 +20,28 @@
         <li><strong>L:</strong> Listar usuarios</li>
     </ul>
 
+    <div style="margin-top: 30px;">
+        <h2>Usuarios</h2>
+        <ul>
+            <li><a class="link" href="?route=index">Listar usuarios</a></li>
+            <li><a class="link" href="?route=create">Registrar usuario</a></li>
+        </ul>
+    </div>
+
+    <div style="margin-top: 30px;">
+        <h2>Estudiantes</h2>
+        <ul>
+            <li><a class="link" href="?route=students.index">Listar estudiantes</a></li>
+            <li><a class="link" href="?route=students.create">Registrar estudiante</a></li>
+        </ul>
+    </div>
+
+    <div style="margin-top: 30px;">
+        <h2>Calificaciones</h2>
+        <ul>
+            <li><a class="link" href="?route=califications.index">Listar calificaciones</a></li>
+            <li><a class="link" href="?route=califications.create">Registrar calificación</a></li>
+        </ul>
+    </div>
+
 <?php require __DIR__ . '/layouts/footer.php'; ?>
